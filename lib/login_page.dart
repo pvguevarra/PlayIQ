@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dashboard_page.dart'; // Import Dashboard Page
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -21,7 +22,13 @@ class LoginPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                // Navigate to Dashboard when Login button is pressed
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const DashboardPage()),
+                );
+              },
               child: const Text('Login'),
             ),
           ],
