@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "240105355199",
+    "project_id": "playiq-d5967",
+    "storage_bucket": "playiq-d5967.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:240105355199:android:894bd915d17363cb8b130a",
+        "android_client_info": {
+          "package_name": "com.example.playiq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCz3v-SH3_DcF0KhW5lsgKrnEtxdxzA9As"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
