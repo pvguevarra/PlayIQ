@@ -41,15 +41,15 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Iconsax.message),
-            label: "Messages",
+            label: "Message",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Iconsax.calendar),
-            label: "Calendar",
+            icon: Icon(Iconsax.frame_1),
+            label: "Roster",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Iconsax.settings),
-            label: "Settings",
+            icon: Icon(Iconsax.calendar_1),
+            label: "Schedule",
           ),
         ],
       ),
