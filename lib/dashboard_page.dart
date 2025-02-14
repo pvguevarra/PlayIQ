@@ -1,44 +1,59 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'login_page.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:playiq/home_screen.dart';
+//import 'package:firebase_auth/firebase_auth.dart';
+//import 'login_page.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final FirebaseAuth _auth = FirebaseAuth.instance;
-    final User? user = _auth.currentUser;
+  State<DashboardPage> createState() => _DashboardPageState();
+}
 
+class _DashboardPageState extends State<DashboardPage> {
+  int selectedIndex = 0;
+  final List pages = [
+   const HomeScreen(),
+    Scaffold(),
+    Scaffold(),
+    Scaffold(),
+  ];
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Main Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              _auth.signOut();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginPage()),
-              );
-            },
+      backgroundColor: Colors.white,
+      bottomNavigationBar: BottomNavigationBar(
+        elevation:0, backgroundColor: Colors.white,
+        unselectedItemColor: Colors.black,
+        selectedItemColor: Colors.deepPurple,
+        type:  BottomNavigationBarType.fixed,
+        currentIndex: selectedIndex,
+        onTap: (value){
+          setState((){
+            selectedIndex = value;
+          });
+        },
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Iconsax.home5),
+            label: "Home",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Iconsax.message),
+            label: "Messages",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Iconsax.calendar),
+            label: "Calendar",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Iconsax.settings),
+            label: "Settings",
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'Welcome, ${user?.email ?? "User"}!',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            const Text('This is your main dashboard for the team.'),
-          ],
-        ),
-      ),
+      body: pages[selectedIndex],
     );
   }
 }
