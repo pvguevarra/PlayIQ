@@ -9,7 +9,7 @@ class PracticePlanDisplayPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Generated Practice Plan")),
+      appBar: AppBar(title: const Text("Here's Your Practice Plan!")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView.builder(
