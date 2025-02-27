@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:playiq/home_screen.dart';
-//import 'package:firebase_auth/firebase_auth.dart';
-//import 'login_page.dart';
+import 'package:playiq/community_page.dart'; 
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -13,24 +12,27 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   int selectedIndex = 0;
-  final List pages = [
-   const HomeScreen(),
-    Scaffold(),
-    Scaffold(),
-    Scaffold(),
+
+  final List<Widget> pages = [
+    const HomeScreen(),
+    Scaffold(), // Placeholder for Messages
+    Scaffold(), // Placeholder for Roster
+    const CommunityPage(), 
   ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       bottomNavigationBar: BottomNavigationBar(
-        elevation:0, backgroundColor: Colors.white,
+        elevation: 0,
+        backgroundColor: Colors.white,
         unselectedItemColor: Colors.black,
         selectedItemColor: Colors.deepPurple,
-        type:  BottomNavigationBarType.fixed,
+        type: BottomNavigationBarType.fixed,
         currentIndex: selectedIndex,
-        onTap: (value){
-          setState((){
+        onTap: (value) {
+          setState(() {
             selectedIndex = value;
           });
         },
@@ -48,8 +50,8 @@ class _DashboardPageState extends State<DashboardPage> {
             label: "Roster",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Iconsax.calendar_1),
-            label: "Schedule",
+            icon: Icon(Iconsax.people), 
+            label: "Community", 
           ),
         ],
       ),
