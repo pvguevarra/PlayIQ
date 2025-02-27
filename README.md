@@ -1,49 +1,82 @@
+How to Install and Run Flutter to Test the App
 
-# PlayIQ
-CSCI 490 Project
+Installing Flutter
 
-How to Install and run flutter to test app
+Windows:
 
-1) Installing flutter
+Download Flutter SDK: Flutter Installation
 
-    Windows: 
-        1) Download Flutter SDK: https://docs.flutter.dev/get-started/install
-        2) Extract the zip file ot a directory
-        3) Add flutter to path running this command: [System.Environment]::SetEnvironmentVariable("Path", $Env:Path + ";C:\flutter\bin", [System.EnvironmentVariableTarget]::Machine)
-        4) Verify by running: flutter doctor
+Extract the zip file to a directory (e.g., C:\flutter)
 
-    Mac:
-        1) Install using: brew install --cask flutter
-        2) verify: flutter doctor
+Add Flutter to the system path by running this command in PowerShell:
 
-2) Install Dependencies
+[System.Environment]::SetEnvironmentVariable("Path", $Env:Path + ";C:\\flutter\\bin", [System.EnvironmentVariableTarget]::Machine)
 
-    - Dart SDK(Should be included with Flutter)
-    - Android Studio (for Android emulator)
-    - Xcode (for ios dev)
-    Should work for either emulator
+Verify the installation by running:
 
-3) Set up Emulator/Device
-    Android:
-        1) Install an Android emulator via Android Studio
-            - I clicked on the 3 dots on the top right
-                1) Went to virtual Device Manager
-                2) Create Virtual Device
-                3) Then I picked Pixel 9 Pro
-                4) Continued with default settings
-                5) Ran emulator before starting actual app
-    ios:
-        1) Installed Xcode via app store
-        2) started it by using open -a Simulator
+flutter doctor
 
-4) Clone Repo
+Mac:
 
-5) Install Flutter Packages
-    1) I ran this all in vsCode (Can be ran in powershell or terminal)
-        flutter pub get
+Install Flutter using Homebrew:
 
-6) Run the App
-    1) Start the app using:
-        flutter run
-    Should be building app so it will take some time
-    2) App should launch!
+brew install --cask flutter
+
+Verify installation:
+
+flutter doctor
+
+Install Dependencies
+
+Required Tools:
+
+Dart SDK (Included with Flutter)
+
+Android Studio (For Android development and emulator setup)
+
+Xcode (For iOS development and iOS simulator)
+
+Set Up Emulator or Physical Device
+
+Android Emulator:
+
+Open Android Studio
+
+Click on the three dots on the top-right corner
+
+Go to Virtual Device Manager
+
+Click Create Virtual Device
+
+Select a device (e.g., Pixel 9 Pro)
+
+Continue with the default settings
+
+Start the emulator before running the app
+
+iOS Simulator:
+
+Install Xcode from the App Store
+
+Open the simulator with:
+
+open -a Simulator
+
+Clone the Repository
+
+git clone <your-repository-url>
+cd playiq
+
+Install Flutter Packages
+
+Run the following command in VS Code, PowerShell, or Terminal:
+
+flutter pub get
+
+Run the App
+
+Start the application with:
+
+flutter run
+
+The app will begin building. This process may take some time. Once completed, the app should launch successfully!
