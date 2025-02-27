@@ -1,7 +1,12 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:playiq/practice_plan_page.dart';
 import 'package:playiq/gameplan_page.dart';
+import 'package:http/http.dart' as http;
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,14 +19,101 @@ class _HomeScreenState extends State<HomeScreen> {
   Color purple = const Color(0xFF800080);
   Color grey = const Color(0xFF808080);
 
-  final Map<String, String> weatherInfo = {
-    "temperature": "72°F",
-    "condition": "Partly Cloudy",
-    "humidity": "60%",
-    "wind": "5 mph NE"
-  };
 
-  // Function to add a new event to Firestore
+  final String _apiKey = "e55f958eae154f0085471252252702";
+  Map<String, dynamic> _weatherInfo = {}; 
+
+@override
+void initState() {
+  super.initState();
+  fetchWeather(); // Request permissions & fetch location
+}
+
+Future<void> fetchWeather() async {
+  try {
+    if (kDebugMode) {
+      print("Starting fetchWeather()...");
+    }
+
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      if (kDebugMode) {
+        print("Location services are disabled.");
+      }
+      return;
+    }
+
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        if (kDebugMode) {
+          print("Location permission denied.");
+        }
+        return;
+      }
+    }
+
+    if (kDebugMode) {
+      print("Location services enabled & permissions granted.");
+    }
+
+
+    Position position = await Geolocator.getCurrentPosition(
+      // ignore: deprecated_member_use
+      desiredAccuracy: LocationAccuracy.best,
+    );
+    if (kDebugMode) {
+      print("📍 Latitude: ${position.latitude}, Longitude: ${position.longitude}");
+    }
+
+
+    List<Placemark> placemarks = await placemarkFromCoordinates(
+      position.latitude, position.longitude,
+    );
+
+    if (placemarks.isEmpty || placemarks[0].locality == null) {
+      if (kDebugMode) {
+        print("No city found! Using default location.");
+      }
+      return;
+    }
+
+    String city = placemarks[0].locality!;
+    if (kDebugMode) {
+      print("Detected City: $city");
+    }
+
+    final String url = "https://api.weatherapi.com/v1/current.json?key=$_apiKey&q=$city&aqi=no";
+    if (kDebugMode) {
+      print("Fetching weather data from: $url");
+    }
+
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      final weatherData = json.decode(response.body);
+      setState(() {
+        _weatherInfo = weatherData;
+      });
+      if (kDebugMode) {
+        print("Weather Data Retrieved Successfully!");
+      }
+    } else {
+      if (kDebugMode) {
+        print("Weather API error: Status Code ${response.statusCode}");
+      }
+    }
+  } catch (error) {
+    if (kDebugMode) {
+      print("ERROR in fetchWeather(): $error");
+    }
+  }
+}
+
+
+
+
   void _addNewEvent() {
     final titleController = TextEditingController();
     final dateController = TextEditingController();
@@ -75,7 +167,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Function to add a new announcement to Firestore
   void _addNewAnnouncement() {
     final announcementController = TextEditingController();
 
@@ -110,7 +201,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // StreamBuilder for Upcoming Events from Firestore
   Widget upcomingEventsList() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('events').snapshots(),
@@ -129,7 +219,10 @@ class _HomeScreenState extends State<HomeScreen> {
               key: Key(doc.id),
               direction: DismissDirection.endToStart,
               onDismissed: (direction) {
-                FirebaseFirestore.instance.collection('events').doc(doc.id).delete();
+                FirebaseFirestore.instance
+                    .collection('events')
+                    .doc(doc.id)
+                    .delete();
               },
               background: Container(
                 color: Colors.red,
@@ -141,7 +234,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
                 child: ListTile(
                   leading: Icon(Icons.event, color: purple),
-                  title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(title,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text("$date at $time"),
                 ),
               ),
@@ -152,10 +246,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // StreamBuilder for Team Announcements from Firestore
   Widget teamAnnouncementsList() {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('announcements').snapshots(),
+      stream:
+          FirebaseFirestore.instance.collection('announcements').snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -169,7 +263,10 @@ class _HomeScreenState extends State<HomeScreen> {
               key: Key(doc.id),
               direction: DismissDirection.endToStart,
               onDismissed: (direction) {
-                FirebaseFirestore.instance.collection('announcements').doc(doc.id).delete();
+                FirebaseFirestore.instance
+                    .collection('announcements')
+                    .doc(doc.id)
+                    .delete();
               },
               background: Container(
                 color: Colors.red,
@@ -181,7 +278,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
                 child: ListTile(
                   leading: Icon(Icons.announcement, color: grey),
-                  title: Text(text, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(text,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             );
@@ -192,22 +290,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget weatherWidget() {
+    if (_weatherInfo.isEmpty) return const Center(child: CircularProgressIndicator());
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: ListTile(
-          leading: const Icon(Icons.wb_sunny, color: Colors.orange),
+          leading: Image.network("https:${_weatherInfo["current"]["condition"]["icon"]}", width: 50, height: 50),
           title: Text(
-              "${weatherInfo["temperature"]} - ${weatherInfo["condition"]}",
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            "${_weatherInfo["current"]["temp_f"]}°F - ${_weatherInfo["current"]["condition"]["text"]}",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
           subtitle: Text(
-              "Humidity: ${weatherInfo["humidity"]} | Wind: ${weatherInfo["wind"]}",
-              style: TextStyle(color: Colors.grey[700])),
+            "Humidity: ${_weatherInfo["current"]["humidity"]}% | Wind: ${_weatherInfo["current"]["wind_mph"]} mph",
+            style: TextStyle(color: Colors.grey[700]),
+          ),
         ),
       ),
     );
   }
+
 
   Widget practicePlanAndGamePlan() {
     return Padding(
@@ -219,7 +322,8 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const PracticePlanPage()),
+                  MaterialPageRoute(
+                      builder: (context) => const PracticePlanPage()),
                 );
               },
               child: Container(
@@ -307,7 +411,6 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
             practicePlanAndGamePlan(),
             const SizedBox(height: 30),
-            // Upcoming Events Section with Add Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 15),
               child: Row(
@@ -331,7 +434,6 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
             upcomingEventsList(),
             const SizedBox(height: 20),
-            // Team Announcements Section with Add Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 15),
               child: Row(
@@ -355,7 +457,6 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 10),
             teamAnnouncementsList(),
             const SizedBox(height: 20),
-            // Weather Forecast Section remains unchanged
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 15),
               child: const Text(
