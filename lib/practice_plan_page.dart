@@ -40,7 +40,7 @@ void fetchDrills() async {
 void generatePracticePlan() {
   if (drills.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("No drills available. Please add some in Firestore.")),
+      const SnackBar(content: Text("No drills available. Please try again later.")),
     );
     return;
   }
@@ -69,7 +69,7 @@ void generatePracticePlan() {
   int numDrills = practiceMinutes ~/ drillMinutes;
   List<Map<String, dynamic>> selectedDrills = filteredDrills.take(numDrills).toList();
 
-  // Navigate to the new practice plan page
+  // Navigate to the new practice plan page where it displays drills
   Navigator.push(
     context,
     MaterialPageRoute(
@@ -93,7 +93,6 @@ void generatePracticePlan() {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Dropdown for category selection
             DropdownButton<String>(
               value: selectedCategory,
               onChanged: (newValue) {

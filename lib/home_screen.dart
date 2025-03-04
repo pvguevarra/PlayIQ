@@ -26,9 +26,10 @@ class _HomeScreenState extends State<HomeScreen> {
 @override
 void initState() {
   super.initState();
-  fetchWeather(); // Request permissions & fetch location
+  fetchWeather(); 
 }
 
+// Requests permissions and fetches weather data from WeatherAPI
 Future<void> fetchWeather() async {
   try {
     if (kDebugMode) {
@@ -67,7 +68,7 @@ Future<void> fetchWeather() async {
       print("📍 Latitude: ${position.latitude}, Longitude: ${position.longitude}");
     }
 
-
+    // Gets coordinates from emulators location
     List<Placemark> placemarks = await placemarkFromCoordinates(
       position.latitude, position.longitude,
     );
@@ -393,7 +394,7 @@ Future<void> fetchWeather() async {
           Spacer(),
           CircleAvatar(
             radius: 27,
-            backgroundImage: AssetImage('assets/images/luka.jpg'),
+            backgroundImage: AssetImage('assets/images/luka.jpg'), //Will update later to add custom image
           ),
         ],
       ),
