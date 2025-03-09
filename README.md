@@ -14,7 +14,7 @@ Add Flutter to the system path by running this command in PowerShell:
 
 Verify the installation by running:
 
-flutter doctor
+'flutter doctor'
 
 Mac:
 
