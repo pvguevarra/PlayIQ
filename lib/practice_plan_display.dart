@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import 'drill_detail_page.dart'; 
 
 class PracticePlanDisplayPage extends StatelessWidget {
   final List<Map<String, dynamic>> selectedDrills;
@@ -15,26 +15,25 @@ class PracticePlanDisplayPage extends StatelessWidget {
         child: ListView.builder(
           itemCount: selectedDrills.length,
           itemBuilder: (context, index) {
-            String? videoId = YoutubePlayer.convertUrlToId(selectedDrills[index]["url"]!);
-
-
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Column(
-                children: [
-                  ListTile(
-                    title: Text(selectedDrills[index]["title"]!),
-                    subtitle: Text("Category: ${selectedDrills[index]["category"]}, Time: ${selectedDrills[index]["time"]} mins"),
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        DrillDetailPage(drill: selectedDrills[index]),
                   ),
-                  if (videoId != null) 
-                    YoutubePlayer(
-                      controller: YoutubePlayerController(
-                        initialVideoId: videoId,
-                        flags: const YoutubePlayerFlags(autoPlay: false),
-                      ),
-                      showVideoProgressIndicator: true,
-                    ),
-                ],
+                );
+              },
+              child: Card(
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                child: ListTile(
+                  title: Text(selectedDrills[index]["title"] ?? "Unknown"),
+                  subtitle: Text(
+                    "Category: ${selectedDrills[index]["category"] ?? "N/A"}, Time: ${selectedDrills[index]["time"] ?? "N/A"} mins",
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                ),
               ),
             );
           },
