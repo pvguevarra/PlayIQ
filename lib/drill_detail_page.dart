@@ -11,20 +11,13 @@ class DrillDetailPage extends StatelessWidget {
     String? videoId = YoutubePlayer.convertUrlToId(drill["url"] ?? "");
 
     return Scaffold(
-      appBar: AppBar(title: Text(drill["title"] ?? "Drill Details")),
-      body: Padding(
+      appBar: AppBar(title: const Text("Drill Details")), 
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              drill["title"] ?? "No Title",
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text("Category: ${drill["category"] ?? "Unknown"}"),
-            Text("Time: ${drill["time"] ?? "Unknown"} mins"),
-            const SizedBox(height: 20),
+            // Embedded Video
             if (videoId != null)
               YoutubePlayer(
                 controller: YoutubePlayerController(
@@ -33,6 +26,35 @@ class DrillDetailPage extends StatelessWidget {
                 ),
                 showVideoProgressIndicator: true,
               ),
+            const SizedBox(height: 20),
+
+            // Drill Title 
+            Text(
+              drill["title"] ?? "No Title",
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+
+            // Drill Category & Time
+            Text(
+              "Category: ${drill["category"] ?? "Unknown"}",
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            Text(
+              "Time: ${drill["time"] ?? "Unknown"} mins",
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 15),
+
+            // Description
+            Text(
+              "Description:",
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              drill["description"] ?? "No description available.",
+              style: const TextStyle(fontSize: 16),
+            ),
           ],
         ),
       ),
