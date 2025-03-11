@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:playiq/home_screen.dart';
 import 'package:playiq/community_page.dart'; 
+import 'package:playiq/roster_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -16,7 +17,7 @@ class _DashboardPageState extends State<DashboardPage> {
   final List<Widget> pages = [
     const HomeScreen(),
     Scaffold(), // Placeholder for Messages
-    Scaffold(), // Placeholder for Roster
+    const RosterPage(), // Placeholder for Roster
     const CommunityPage(), 
   ];
 
