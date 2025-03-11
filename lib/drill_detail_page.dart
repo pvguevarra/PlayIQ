@@ -28,7 +28,7 @@ class DrillDetailPage extends StatelessWidget {
               ),
             const SizedBox(height: 20),
 
-            // Drill Title 
+            // Drill Title
             Text(
               drill["title"] ?? "No Title",
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -44,9 +44,20 @@ class DrillDetailPage extends StatelessWidget {
               "Time: ${drill["time"] ?? "Unknown"} mins",
               style: const TextStyle(fontSize: 16),
             ),
+            const SizedBox(height: 10),
+
+            // Equipment Section
+            Text(
+              "Equipment Needed:",
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              drill["equipment"] ?? "No equipment required.",
+              style: const TextStyle(fontSize: 16),
+            ),
             const SizedBox(height: 15),
 
-            // Description
+            // Description Section
             Text(
               "Description:",
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
