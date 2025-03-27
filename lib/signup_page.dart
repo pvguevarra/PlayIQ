@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dashboard_page.dart';
+import 'create_join_team_page.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -16,7 +16,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
-  final TextEditingController usernameController = TextEditingController(); // NEW
+  final TextEditingController usernameController = TextEditingController();
 
   Future<void> _signUp() async {
     if (passwordController.text != confirmPasswordController.text) {
@@ -33,16 +33,17 @@ class _SignUpPageState extends State<SignUpPage> {
         password: passwordController.text.trim(),
       );
 
-      // Store user info in Firestore
+      // Store user info in Firestore with empty teamId
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
-        'username': usernameController.text.trim(), // Store username
+        'username': usernameController.text.trim(),
         'email': emailController.text.trim(),
+        'teamId': '',
       });
 
-      // Navigate to Dashboard
+      // Navigate to Create/Join Team page
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const DashboardPage()),
+        MaterialPageRoute(builder: (context) => const CreateJoinTeamPage()),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -113,182 +114,204 @@ Future<void> fetchWeather() async {
 }
 
 
+void _addNewEvent() {
+  final titleController = TextEditingController();
+  final dateController = TextEditingController();
+  final timeController = TextEditingController();
 
-
-  void _addNewEvent() {
-    final titleController = TextEditingController();
-    final dateController = TextEditingController();
-    final timeController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Add New Event'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(labelText: 'Title'),
-              ),
-              TextField(
-                controller: dateController,
-                decoration: const InputDecoration(labelText: 'Date'),
-              ),
-              TextField(
-                controller: timeController,
-                decoration: const InputDecoration(labelText: 'Time'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Add New Event'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(labelText: 'Title'),
             ),
-            ElevatedButton(
-              onPressed: () {
-                if (titleController.text.isNotEmpty &&
-                    dateController.text.isNotEmpty &&
-                    timeController.text.isNotEmpty) {
-                  FirebaseFirestore.instance.collection('events').add({
-                    'title': titleController.text,
-                    'date': dateController.text,
-                    'time': timeController.text,
-                  });
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('Add'),
+            TextField(
+              controller: dateController,
+              decoration: const InputDecoration(labelText: 'Date'),
+            ),
+            TextField(
+              controller: timeController,
+              decoration: const InputDecoration(labelText: 'Time'),
             ),
           ],
-        );
-      },
-    );
-  }
-
-  void _addNewAnnouncement() {
-    final announcementController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Add New Announcement'),
-          content: TextField(
-            controller: announcementController,
-            decoration: const InputDecoration(labelText: 'Announcement'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (announcementController.text.isNotEmpty) {
-                  FirebaseFirestore.instance.collection('announcements').add({
-                    'text': announcementController.text,
-                  });
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+          ElevatedButton(
+            onPressed: () async {
+              if (titleController.text.isNotEmpty &&
+                  dateController.text.isNotEmpty &&
+                  timeController.text.isNotEmpty) {
+                final user = FirebaseAuth.instance.currentUser;
+                final userDoc = await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user!.uid)
+                    .get();
+                final teamId = userDoc['teamId'];
+
+                await FirebaseFirestore.instance.collection('events').add({
+                  'title': titleController.text,
+                  'date': dateController.text,
+                  'time': timeController.text,
+                  'teamId': teamId, 
+                });
+
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
+void _addNewAnnouncement() {
+  final announcementController = TextEditingController();
+
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text('Add New Announcement'),
+        content: TextField(
+          controller: announcementController,
+          decoration: const InputDecoration(labelText: 'Announcement'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (announcementController.text.isNotEmpty) {
+                final user = FirebaseAuth.instance.currentUser;
+                final userDoc = await FirebaseFirestore.instance.collection('users').doc(user!.uid).get();
+                final teamId = userDoc['teamId'];
+
+                await FirebaseFirestore.instance.collection('announcements').add({
+                  'text': announcementController.text,
+                  'teamId': teamId,
+                });
+
+                Navigator.of(context).pop();
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   Widget upcomingEventsList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('events').snapshots(),
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return const SizedBox.shrink();
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final events = snapshot.data!.docs;
-        return Column(
-          children: events.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final title = data['title'] ?? '';
-            final date = data['date'] ?? '';
-            final time = data['time'] ?? '';
-            return Dismissible(
-              key: Key(doc.id),
-              direction: DismissDirection.endToStart,
-              onDismissed: (direction) {
-                FirebaseFirestore.instance
-                    .collection('events')
-                    .doc(doc.id)
-                    .delete();
-              },
-              background: Container(
-                color: Colors.red,
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: const Icon(Icons.delete, color: Colors.white),
-              ),
-              child: Card(
-                margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
-                child: ListTile(
-                  leading: Icon(Icons.event, color: purple),
-                  title: Text(title,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text("$date at $time"),
-                ),
-              ),
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+        final teamId = snapshot.data!['teamId'];
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('events')
+              .where('teamId', isEqualTo: teamId)
+              .snapshots(),
+          builder: (context, eventSnapshot) {
+            if (!eventSnapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+            final events = eventSnapshot.data!.docs;
+            return Column(
+              children: events.map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
+                  child: ListTile(
+                    leading: Icon(Icons.event, color: purple),
+                    title: Text(data['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text("${data['date']} at ${data['time']}"),
+                  ),
+                );
+              }).toList(),
             );
-          }).toList(),
+          },
         );
       },
     );
   }
 
-  Widget teamAnnouncementsList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream:
-          FirebaseFirestore.instance.collection('announcements').snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final announcements = snapshot.data!.docs;
-        return Column(
-          children: announcements.map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final text = data['text'] ?? '';
-            return Dismissible(
-              key: Key(doc.id),
-              direction: DismissDirection.endToStart,
-              onDismissed: (direction) {
-                FirebaseFirestore.instance
-                    .collection('announcements')
-                    .doc(doc.id)
-                    .delete();
-              },
-              background: Container(
-                color: Colors.red,
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: const Icon(Icons.delete, color: Colors.white),
-              ),
-              child: Card(
-                margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
-                child: ListTile(
-                  leading: Icon(Icons.announcement, color: grey),
-                  title: Text(text,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
+Widget teamAnnouncementsList() {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) return const SizedBox.shrink();
+
+  return FutureBuilder<DocumentSnapshot>(
+    future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) return const CircularProgressIndicator();
+
+      final teamId = snapshot.data!['teamId'];
+
+      return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('announcements')
+            .where('teamId', isEqualTo: teamId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final announcements = snapshot.data!.docs;
+          if (announcements.isEmpty) {
+            return const Center(child: Text("No announcements yet."));
+          }
+
+          return Column(
+            children: announcements.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final text = data['text'] ?? '';
+              return Dismissible(
+                key: Key(doc.id),
+                direction: DismissDirection.endToStart,
+                onDismissed: (_) {
+                  FirebaseFirestore.instance.collection('announcements').doc(doc.id).delete();
+                },
+                background: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: const Icon(Icons.delete, color: Colors.white),
                 ),
-              ),
-            );
-          }).toList(),
-        );
-      },
-    );
-  }
+                child: Card(
+                  margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
+                  child: ListTile(
+                    leading: Icon(Icons.announcement, color: grey),
+                    title: Text(text, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              );
+            }).toList(),
+          );
+        },
+      );
+    },
+  );
+}
 
   Widget weatherWidget() {
     if (_weatherInfo.isEmpty) return const Center(child: CircularProgressIndicator());
@@ -381,25 +404,68 @@ Future<void> fetchWeather() async {
     );
   }
 
-  Widget headerParts() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      child: Row(
-        children: const [
-          Text(
-            "Welcome Coach",
-            style: TextStyle(
-                fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black),
-          ),
-          Spacer(),
-          CircleAvatar(
-            radius: 27,
-            backgroundImage: AssetImage('assets/images/luka.jpg'), //Will update later to add custom image
-          ),
-        ],
+Widget headerParts() {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+
+  if (userId == null) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 15),
+      child: Text(
+        "Team",
+        style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
       ),
     );
   }
+
+  return FutureBuilder<DocumentSnapshot>(
+    future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
+    builder: (context, userSnapshot) {
+      if (!userSnapshot.hasData) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 15),
+          child: CircularProgressIndicator(),
+        );
+      }
+
+      final teamId = userSnapshot.data!['teamId'];
+      return FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance.collection('teams').doc(teamId).get(),
+        builder: (context, teamSnapshot) {
+          if (!teamSnapshot.hasData) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 15),
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          final teamName = teamSnapshot.data!['name'] ?? 'Team';
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15),
+            child: Row(
+              children: [
+                Text(
+                  teamName,
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const Spacer(),
+                const CircleAvatar(
+                  radius: 27,
+                  backgroundImage: AssetImage('assets/images/luka.jpg'),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {

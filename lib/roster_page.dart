@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class RosterPage extends StatefulWidget {
   const RosterPage({super.key});
@@ -12,6 +13,24 @@ class _RosterPageState extends State<RosterPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _positionController = TextEditingController();
+
+  String? _teamId;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTeamId();
+  }
+
+  Future<void> _fetchTeamId() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      setState(() {
+        _teamId = doc['teamId'];
+      });
+    }
+  }
 
   void _addOrEditPlayer({String? playerId}) {
     _nameController.clear();
@@ -50,17 +69,21 @@ class _RosterPageState extends State<RosterPage> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                if (_nameController.text.isNotEmpty && _positionController.text.isNotEmpty) {
+              onPressed: () async {
+                if (_nameController.text.isNotEmpty &&
+                    _positionController.text.isNotEmpty &&
+                    _teamId != null) {
                   if (playerId == null) {
-                    _firestore.collection('players').add({
+                    await _firestore.collection('players').add({
                       'name': _nameController.text,
                       'position': _positionController.text,
+                      'teamId': _teamId,
                     });
                   } else {
-                    _firestore.collection('players').doc(playerId).update({
+                    await _firestore.collection('players').doc(playerId).update({
                       'name': _nameController.text,
                       'position': _positionController.text,
+                      'teamId': _teamId,
                     });
                   }
                 }
@@ -80,10 +103,17 @@ class _RosterPageState extends State<RosterPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_teamId == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Roster')),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore.collection('players').snapshots(),
+        stream: _firestore
+            .collection('players')
+            .where('teamId', isEqualTo: _teamId)
+            .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
