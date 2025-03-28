@@ -110,7 +110,7 @@ class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
     await _firestore.collection('users').doc(user.uid).update({
       'teamId': teamId,
     });
-
+    // Navigates to the dashboard page after joining the team
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const DashboardPage()),
