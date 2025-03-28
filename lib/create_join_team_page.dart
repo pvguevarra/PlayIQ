@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,108 +12,170 @@ class CreateJoinTeamPage extends StatefulWidget {
 }
 
 class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
-  final TextEditingController _teamNameController = TextEditingController();
-  final TextEditingController _teamCodeController = TextEditingController();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final TextEditingController teamNameController = TextEditingController();
+  final TextEditingController joinCodeController = TextEditingController();
 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  String?
+      generatedCode; //Stores randomly generated team code once it is created
+
+  // Generates a 7 character random alphanumeric code
+  String _generateRandomCode(int length) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final rand = Random();
+    return List.generate(length, (index) => chars[rand.nextInt(chars.length)])
+        .join();
+  }
+
+  // Generates a unique team code and checks if it already exists in Firestore
+  // If it exists, it generates a new one until a unique code is found
+  Future<void> _generateUniqueCode() async {
+    bool isUnique = false;
+    String newCode = '';
+
+    while (!isUnique) {
+      newCode = _generateRandomCode(7);
+      final existing = await _firestore
+          .collection('teams')
+          .where('code', isEqualTo: newCode)
+          .get();
+
+      if (existing.docs.isEmpty) {
+        isUnique = true;
+      }
+    }
+    // Shows the generated code in the UI
+    setState(() {
+      generatedCode = newCode;
+    });
+  }
+
+  // Creates a new team in Firestore with the generated code
   Future<void> _createTeam() async {
     final user = _auth.currentUser;
-    if (user == null || _teamNameController.text.trim().isEmpty) return;
+    final teamName = teamNameController.text.trim();
 
-    try {
-      // Create team
-      DocumentReference teamRef = await _firestore.collection('teams').add({
-        'name': _teamNameController.text.trim(),
-        'createdBy': user.uid,
-        'members': [user.uid],
-      });
+    if (teamName.isEmpty || generatedCode == null || user == null) return;
 
-      // Update user document with teamId
-      await _firestore.collection('users').doc(user.uid).update({
-        'teamId': teamRef.id,
-      });
+    // Saves the team data in Firestore
+    final teamRef = await _firestore.collection('teams').add({
+      'name': teamName,
+      'code': generatedCode,
+      'createdBy': user.uid,
+      'members': [user.uid],
+    });
 
-      // Navigate to dashboard
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const DashboardPage()),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error creating team: $e')),
-      );
-    }
+    await _firestore.collection('users').doc(user.uid).update({
+      'teamId': teamRef.id,
+    });
+
+    // Navigates to the dashboard page after creating the team
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const DashboardPage()),
+    );
   }
 
+  // Joins an existing team using the provided code
   Future<void> _joinTeam() async {
     final user = _auth.currentUser;
-    final teamCode = _teamCodeController.text.trim();
-    if (user == null || teamCode.isEmpty) return;
+    final enteredCode = joinCodeController.text.trim().toUpperCase();
 
-    try {
-      final teamDoc = await _firestore.collection('teams').doc(teamCode).get();
-      if (!teamDoc.exists) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Team not found')),
-        );
-        return;
-      }
+    if (enteredCode.isEmpty || user == null) return;
 
-      // Add user to team's member list
-      await _firestore.collection('teams').doc(teamCode).update({
-        'members': FieldValue.arrayUnion([user.uid]),
-      });
+    final result = await _firestore
+        .collection('teams')
+        .where('code', isEqualTo: enteredCode)
+        .limit(1)
+        .get();
 
-      // Update user's teamId
-      await _firestore.collection('users').doc(user.uid).update({
-        'teamId': teamCode,
-      });
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const DashboardPage()),
-      );
-    } catch (e) {
+    if (result.docs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error joining team: $e')),
+        const SnackBar(content: Text("Team code not found.")),
       );
+      return;
     }
+
+    final teamDoc = result.docs.first;
+    final teamId = teamDoc.id;
+
+    // Add user to the team's members list
+    await _firestore.collection('teams').doc(teamId).update({
+      'members': FieldValue.arrayUnion([user.uid]),
+    });
+
+    // Updates user with the team ID
+    await _firestore.collection('users').doc(user.uid).update({
+      'teamId': teamId,
+    });
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const DashboardPage()),
+    );
   }
 
+  // UI portion of the code
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Join or Create Team')),
+      appBar: AppBar(title: const Text("Join or Create a Team")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
+        child: ListView(
           children: [
-            const Text(
-              'Create a New Team',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+            const Text("Create a Team",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+
+            // Input team name
             TextField(
-              controller: _teamNameController,
+              controller: teamNameController,
               decoration: const InputDecoration(labelText: 'Team Name'),
             ),
+            const SizedBox(height: 10),
+
+            // Button to generate a unique team code
+            ElevatedButton.icon(
+              icon: const Icon(Icons.refresh),
+              onPressed: _generateUniqueCode,
+              label: const Text("Generate Team Code"),
+            ),
+            // Shows the generated code once it is created
+            if (generatedCode != null) ...[
+              const SizedBox(height: 10),
+              Center(
+                child: Text(
+                  "Team Code: $generatedCode",
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.deepPurple,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+            // Button to create the team
             ElevatedButton(
-              onPressed: _createTeam,
-              child: const Text('Create Team'),
+              onPressed: generatedCode != null ? _createTeam : null,
+              child: const Text("Create Team"),
             ),
-            const SizedBox(height: 30),
-            const Text(
-              'Or Join an Existing Team',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+
+            const Divider(height: 40),
+
+            const Text("Join a Team",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            // Input team code
             TextField(
-              controller: _teamCodeController,
+              controller: joinCodeController,
               decoration: const InputDecoration(labelText: 'Enter Team Code'),
             ),
+            const SizedBox(height: 10),
+            // Join existing team button
             ElevatedButton(
-              onPressed: _joinTeam,
-              child: const Text('Join Team'),
-            ),
+                onPressed: _joinTeam, child: const Text("Join Team")),
           ],
         ),
       ),
