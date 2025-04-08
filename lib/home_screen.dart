@@ -8,6 +8,7 @@ import 'package:playiq/gameplan_page.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:playiq/models/current_user.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -119,6 +120,8 @@ void _addNewEvent() {
   final dateController = TextEditingController();
   final timeController = TextEditingController();
 
+  if (CurrentUser().role != 'coach') return; //Safeguard so players can't trigger it
+
   showDialog(
     context: context,
     builder: (context) {
@@ -179,6 +182,7 @@ void _addNewEvent() {
 
 void _addNewAnnouncement() {
   final announcementController = TextEditingController();
+  if (CurrentUser().role != 'coach') return; //Safeguard so players can't trigger it
 
   showDialog(
     context: context,
@@ -469,6 +473,10 @@ Widget headerParts() {
 
   @override
   Widget build(BuildContext context) {
+
+    // Debugging: Print the current user role 
+    // Delete later on
+    print('Current User Role: ${CurrentUser().role}');
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
@@ -491,6 +499,7 @@ Widget headerParts() {
                         letterSpacing: -.5,
                         color: Colors.black),
                   ),
+                  if (CurrentUser().role == 'coach')
                   IconButton(
                     icon: Icon(Icons.add, color: purple),
                     onPressed: _addNewEvent,
@@ -514,8 +523,9 @@ Widget headerParts() {
                         letterSpacing: -.5,
                         color: Colors.black),
                   ),
+                  if (CurrentUser().role == 'coach')
                   IconButton(
-                    icon: Icon(Icons.add, color: grey),
+                    icon: Icon(Icons.add, color: Colors.deepPurple),
                     onPressed: _addNewAnnouncement,
                   ),
                 ],

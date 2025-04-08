@@ -3,7 +3,9 @@ import 'package:iconsax/iconsax.dart';
 import 'package:playiq/home_screen.dart';
 import 'package:playiq/community_page.dart'; 
 import 'package:playiq/roster_page.dart';
+import 'package:playiq/settings_page.dart';
 
+// Navigation for home_screen.dart, messages.dart, roster_page.dart, community_page.dart
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
@@ -16,9 +18,9 @@ class _DashboardPageState extends State<DashboardPage> {
 
   final List<Widget> pages = [
     const HomeScreen(),
-    Scaffold(), // Placeholder for Messages
-    const RosterPage(), // Placeholder for Roster
     const CommunityPage(), 
+    const RosterPage(),
+    const SettingsPage(), 
   ];
 
   @override
@@ -43,16 +45,16 @@ class _DashboardPageState extends State<DashboardPage> {
             label: "Home",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Iconsax.message),
-            label: "Message",
+            icon: Icon(Iconsax.people),
+            label: "Community",
           ),
           BottomNavigationBarItem(
             icon: Icon(Iconsax.frame_1),
             label: "Roster",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Iconsax.people), 
-            label: "Community", 
+            icon: Icon(Iconsax.setting_2), 
+            label: "Settings", 
           ),
         ],
       ),

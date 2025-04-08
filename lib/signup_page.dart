@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'create_join_team_page.dart';
+import 'package:playiq/models/current_user.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -49,7 +50,15 @@ class _SignUpPageState extends State<SignUpPage> {
         'username': usernameController.text.trim(),
         'email': emailController.text.trim(),
         'teamId': '',
+        'role': 'player',
       });
+
+      final currentUser = CurrentUser();
+      currentUser.role = 'player';
+      currentUser.teamId = '';
+
+
+
       //Navigates to create or join team page
       Navigator.pushReplacement(
         context,

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dashboard_page.dart';
 import 'create_join_team_page.dart';
+import 'package:playiq/models/current_user.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -29,9 +30,13 @@ class _LoginPageState extends State<LoginPage> {
           .collection('users')
           .doc(userCredential.user!.uid)
           .get();
-      final teamId = userDoc['teamId'] ?? '';
 
-      if (teamId.isEmpty) {
+
+      final currentUser = CurrentUser();
+      currentUser.role = userDoc['role'];
+      currentUser.teamId = userDoc['teamId'];
+
+      if (currentUser.teamId == null || currentUser.teamId!.isEmpty) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const CreateJoinTeamPage()),

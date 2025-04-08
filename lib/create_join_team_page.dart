@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dashboard_page.dart';
+import 'package:playiq/models/current_user.dart';
 
 class CreateJoinTeamPage extends StatefulWidget {
   const CreateJoinTeamPage({super.key});
@@ -69,7 +70,13 @@ class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
 
     await _firestore.collection('users').doc(user.uid).update({
       'teamId': teamRef.id,
+      'role': 'coach',
     });
+
+    // Updates singleton
+    final currentUser= CurrentUser();
+    currentUser.role = 'coach';
+    currentUser.teamId = teamRef.id;
 
     // Navigates to the dashboard page after creating the team
     Navigator.pushReplacement(
@@ -109,6 +116,7 @@ class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
     // Updates user with the team ID
     await _firestore.collection('users').doc(user.uid).update({
       'teamId': teamId,
+      'role': 'player',
     });
     // Navigates to the dashboard page after joining the team
     Navigator.pushReplacement(
