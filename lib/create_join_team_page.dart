@@ -74,7 +74,7 @@ class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
     });
 
     // Updates singleton
-    final currentUser= CurrentUser();
+    final currentUser = CurrentUser();
     currentUser.role = 'coach';
     currentUser.teamId = teamRef.id;
 
@@ -118,6 +118,11 @@ class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
       'teamId': teamId,
       'role': 'player',
     });
+
+    final currentUser = CurrentUser();
+    currentUser.role = 'player';
+    currentUser.teamId = teamId;
+
     // Navigates to the dashboard page after joining the team
     Navigator.pushReplacement(
       context,
