@@ -476,9 +476,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const Spacer(),
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 27,
-                    backgroundImage: AssetImage('assets/images/luka.jpg'),
+                    backgroundColor: Colors.deepPurple.shade100,
+                    child: Text(
+                      (userSnapshot.data!['username'] as String)
+                          .substring(0, 1)
+                          .toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple,
+                      ),
+                    ),
                   ),
                 ],
               ),

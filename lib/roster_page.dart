@@ -11,8 +11,6 @@ class RosterPage extends StatefulWidget {
 
 class _RosterPageState extends State<RosterPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _positionController = TextEditingController();
 
   String? _teamId;
 
@@ -20,8 +18,10 @@ class _RosterPageState extends State<RosterPage> {
   void initState() {
     super.initState();
     _fetchTeamId();
+    _autoAddCurrentUserToRoster();
   }
 
+  // Fetch the team ID of the current user from Firestore
   Future<void> _fetchTeamId() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId != null) {
@@ -32,73 +32,29 @@ class _RosterPageState extends State<RosterPage> {
     }
   }
 
-  void _addOrEditPlayer({String? playerId}) {
-    _nameController.clear();
-    _positionController.clear();
+  // Auto-add the current user to the roster if they are not already in it
+  Future<void> _autoAddCurrentUserToRoster() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-    if (playerId != null) {
-      _firestore.collection('players').doc(playerId).get().then((doc) {
-        if (doc.exists) {
-          _nameController.text = doc['name'];
-          _positionController.text = doc['position'];
-        }
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final teamId = userDoc['teamId'];
+    final username = userDoc['username'];
+    final role = userDoc['role'] == 'coach' ? 'Coach' : 'Player';
+
+    final playerQuery = await _firestore
+        .collection('players')
+        .where('teamId', isEqualTo: teamId)
+        .where('name', isEqualTo: username)
+        .get();
+
+    if (playerQuery.docs.isEmpty) {
+      await _firestore.collection('players').add({
+        'name': username,
+        'position': role,
+        'teamId': teamId,
       });
     }
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(playerId == null ? 'Add Player' : 'Edit Player'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Player Name'),
-              ),
-              TextField(
-                controller: _positionController,
-                decoration: const InputDecoration(labelText: 'Position'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (_nameController.text.isNotEmpty &&
-                    _positionController.text.isNotEmpty &&
-                    _teamId != null) {
-                  if (playerId == null) {
-                    await _firestore.collection('players').add({
-                      'name': _nameController.text,
-                      'position': _positionController.text,
-                      'teamId': _teamId,
-                    });
-                  } else {
-                    await _firestore.collection('players').doc(playerId).update({
-                      'name': _nameController.text,
-                      'position': _positionController.text,
-                      'teamId': _teamId,
-                    });
-                  }
-                }
-                Navigator.pop(context);
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _deletePlayer(String playerId) {
-    _firestore.collection('players').doc(playerId).delete();
   }
 
   @override
@@ -108,7 +64,14 @@ class _RosterPageState extends State<RosterPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Roster')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        title: const Text('Team Roster'),
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
             .collection('players')
@@ -120,37 +83,82 @@ class _RosterPageState extends State<RosterPage> {
           }
 
           final players = snapshot.data!.docs;
+
+          // Sort coach to the top
+          players.sort((a, b) {
+            final aRole = (a['position'] as String).toLowerCase();
+            final bRole = (b['position'] as String).toLowerCase();
+
+            if (aRole == 'coach' && bRole != 'coach') return -1;
+            if (aRole != 'coach' && bRole == 'coach') return 1;
+            return 0;
+          });
           return ListView.builder(
+            padding: const EdgeInsets.all(12),
             itemCount: players.length,
             itemBuilder: (context, index) {
               final player = players[index];
               final data = player.data() as Map<String, dynamic>;
-              return Card(
-                child: ListTile(
-                  title: Text(data['name']),
-                  subtitle: Text('Position: ${data['position']}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _addOrEditPlayer(playerId: player.id),
+
+              // Check if the player is a coach or a player
+              // and set the badge color accordingly
+              final isCoach =(data['position'] as String).toLowerCase() == 'coach';
+              final badgeColor = isCoach ? Colors.deepPurple : Colors.teal;
+
+              return Center(
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.9, // 90% width
+                  child: Card(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    elevation: 2,
+                    child: ListTile(
+                      // Avatar with the first letter of the name
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.deepPurple.shade100,
+                        radius: 20,
+                        child: Text(
+                          data['name'].substring(0, 1).toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.deepPurple,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deletePlayer(player.id),
+                      title: Text(
+                        data['name'],
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    ],
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: badgeColor,
+                              borderRadius: BorderRadius.circular(50),
+                            ),
+                            child: Text(
+                              data['position'],
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               );
             },
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _addOrEditPlayer(),
-        child: const Icon(Icons.add),
       ),
     );
   }

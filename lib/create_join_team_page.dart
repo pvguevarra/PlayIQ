@@ -73,6 +73,17 @@ class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
       'role': 'coach',
     });
 
+    // Fetch username
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final username = userDoc['username'];
+
+    // Auto-add coach to players
+    await _firestore.collection('players').add({
+      'name': username,
+      'position': 'Coach',
+      'teamId': teamRef.id,
+    });
+
     // Updates singleton
     final currentUser = CurrentUser();
     currentUser.role = 'coach';
@@ -119,6 +130,16 @@ class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
       'role': 'player',
     });
 
+    // Fetch username
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final username = userDoc['username'];
+
+    // Auto-add player to players
+    await _firestore.collection('players').add({
+      'name': username,
+      'position': 'Player',
+      'teamId': teamId,
+    });
     final currentUser = CurrentUser();
     currentUser.role = 'player';
     currentUser.teamId = teamId;
@@ -134,62 +155,116 @@ class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Join or Create a Team")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
-            const Text("Create a Team",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text("Join or Create a Team"),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Create a Team",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
 
-            // Input team name
-            TextField(
-              controller: teamNameController,
-              decoration: const InputDecoration(labelText: 'Team Name'),
-            ),
-            const SizedBox(height: 10),
+              // Input team name
+              TextField(
+                controller: teamNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Team Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
 
-            // Button to generate a unique team code
-            ElevatedButton.icon(
-              icon: const Icon(Icons.refresh),
-              onPressed: _generateUniqueCode,
-              label: const Text("Generate Team Code"),
-            ),
-            // Shows the generated code once it is created
-            if (generatedCode != null) ...[
-              const SizedBox(height: 10),
-              Center(
-                child: Text(
-                  "Team Code: $generatedCode",
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple,
+              // Button to generate a unique team code
+              ElevatedButton.icon(
+                icon: const Icon(Icons.refresh),
+                onPressed: _generateUniqueCode,
+                label: const Text("Generate Team Code"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  minimumSize: const Size(double.infinity, 60),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+
+              // Shows the generated code once it is created
+              if (generatedCode != null) ...[
+                const SizedBox(height: 12),
+                Center(
+                  child: Text(
+                    "Team Code: $generatedCode",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+
+              // Button to create the team
+              ElevatedButton(
+                onPressed: generatedCode != null ? _createTeam : null,
+                child: const Text("Create Team"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  minimumSize: const Size(double.infinity, 60),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+
+              const Divider(height: 40),
+
+              const Text(
+                "Join a Team",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+
+              // Input team code
+              TextField(
+                controller: joinCodeController,
+                decoration: const InputDecoration(
+                  labelText: 'Enter Team Code',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Join existing team button
+              ElevatedButton(
+                onPressed: _joinTeam,
+                child: const Text("Join Team"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  minimumSize: const Size(double.infinity, 60),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
             ],
-            const SizedBox(height: 10),
-            // Button to create the team
-            ElevatedButton(
-              onPressed: generatedCode != null ? _createTeam : null,
-              child: const Text("Create Team"),
-            ),
-
-            const Divider(height: 40),
-
-            const Text("Join a Team",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            // Input team code
-            TextField(
-              controller: joinCodeController,
-              decoration: const InputDecoration(labelText: 'Enter Team Code'),
-            ),
-            const SizedBox(height: 10),
-            // Join existing team button
-            ElevatedButton(
-                onPressed: _joinTeam, child: const Text("Join Team")),
-          ],
+          ),
         ),
       ),
     );
