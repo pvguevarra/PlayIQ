@@ -1,82 +1,112 @@
-How to Install and Run Flutter to Test the App
 
-Installing Flutter
+# PlayIQ
 
-Windows:
+PlayIQ is a Flutter application designed to help flag football coaches and players streamline team management, communication, and training. It supports role-based access for coaches and players, allowing teams to create rosters, generate practice plans, share game strategies, and more.
 
-Download Flutter SDK: Flutter Installation
+## Tech Stack
 
-Extract the zip file to a directory (e.g., C:\flutter)
+- **Flutter + Dart**: Cross-platform mobile development.
+- **Firebase Auth**: Secure user authentication.
+- **Firestore**: Real-time NoSQL database for storing user and team data.
+- **YouTube Player**: Embedded instructional videos in practice plans.
+- **Material 3 + Iconsax**: Modern and consistent UI design.
+- **Weather API**: Displays local weather conditions on the home screen.
+- **Geolocator + Geocoding**: Fetches user location and city name.
 
-Add Flutter to the system path by running this command in PowerShell:
+## Architecture
 
-[System.Environment]::SetEnvironmentVariable("Path", $Env:Path + ";C:\\flutter\\bin", [System.EnvironmentVariableTarget]::Machine)
+PlayIQ is modularly structured with components handling authentication, team creation, dashboard views, and feature-specific UI.
 
-Verify the installation by running:
+### Authentication & Team Management
+- Handles sign-up, login, and role assignment (coach or player).
+- Users can create or join teams via a unique code.
+- Coaches are auto-assigned as admins of their team.
 
-'flutter doctor'
+### Dashboard & Navigation
+- Bottom navigation bar provides access to Home, Community, Roster, and Settings.
+- Home screen shows events, announcements, and weather updates.
 
-Mac:
+### Practice & Game Planning
+- Coaches can generate practice plans based on selected category and duration.
+- Drills include embedded YouTube videos, equipment needs, and descriptions.
+- Game plan page allows strategy input for upcoming games.
 
-Install Flutter using Homebrew:
+### Community & Roster
+- Community board includes team discussion posts, comment threads, and vote counts.
+- Roster is dynamically populated and auto-synced with user/team data.
+- Coaches appear at the top with badge styling.
 
-brew install --cask flutter
+### Settings & Profile
+- Users can edit username, change password, view team code, logout, or delete their account.
 
-Verify installation:
+## Features
 
-flutter doctor
+- Role-based access control (coach/player)
+- Team creation and invite system via unique codes
+- Drill-based practice plan generation
+- Embedded training videos with categories and descriptions
+- Event and announcement posting (coach-only)
+- Community forum with upvotes, downvotes, and commenting
+- Roster management with role badges
+- Local weather forecast integration
+- Modern Material 3 UI theme and intuitive navigation
+- Secure Firebase authentication and Firestore data management
 
-Install Dependencies
+## Getting Started
 
-Required Tools:
+To run PlayIQ on your own device using Flutter:
 
-Dart SDK (Included with Flutter)
+### Prerequisites
 
-Android Studio (For Android development and emulator setup)
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) (latest stable version)
+- Android Studio or Visual Studio Code with Flutter/Dart plugins
+- Firebase CLI (for re-generating config, if needed)
+- A connected Android device or emulator
 
-Xcode (For iOS development and iOS simulator)
+### Installation Steps
 
-Set Up Emulator or Physical Device
+1. **Clone the repository**
 
-Android Emulator:
-
-Open Android Studio
-
-Click on the three dots on the top-right corner
-
-Go to Virtual Device Manager
-
-Click Create Virtual Device
-
-Select a device (e.g., Pixel 9 Pro)
-
-Continue with the default settings
-
-Start the emulator before running the app
-
-iOS Simulator:
-
-Install Xcode from the App Store
-
-Open the simulator with:
-
-open -a Simulator
-
-Clone the Repository
-
-git clone <your-repository-url>
+```bash
+git clone https://github.com/your-username/playiq.git
 cd playiq
+```
 
-Install Flutter Packages
+2. **Install dependencies**
 
-Run the following command in VS Code, PowerShell, or Terminal:
-
+```bash
 flutter pub get
+```
 
-Run the App
+3. **Connect Firebase**
 
-Start the application with:
+Make sure `firebase_options.dart` is already included (it is). If reconfiguration is needed:
 
+```bash
+flutterfire configure
+```
+
+> You’ll need Firebase CLI installed and authenticated to your Google account.
+
+4. **Run the app**
+
+Make sure your emulator or physical device is running:
+
+```bash
 flutter run
+```
 
-The app will begin building. This process may take some time. Once completed, the app should launch successfully!
+### Alternative: Using the APK
+
+Once the final `.apk` build is available, you can install it directly on any Android device:
+
+1. Transfer the APK to your device.
+2. Enable "Install from Unknown Sources" in Android settings.
+3. Tap on the APK file to install and open the app.
+
+## Contributors
+
+| Name             | GitHub Username     |
+|------------------|---------------------|
+| Patrick Guevarra | @pvguevarra         |
+
