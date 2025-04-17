@@ -2,51 +2,67 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:playiq/practice_plan_display.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class PracticePlanPage extends StatefulWidget {
   const PracticePlanPage({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _PracticePlanPageState createState() => _PracticePlanPageState();
 }
 
 class _PracticePlanPageState extends State<PracticePlanPage> {
-  final TextEditingController practiceTimeController = TextEditingController();
-  final TextEditingController drillTimeController = TextEditingController();
-
+  // Dropdown selections
+  String? selectedPracticeTime;
+  String? selectedDrillTime;
   String selectedCategory = "All"; // Default to all categories
+  String selectedSkillLevel = 'Beginner';
+
+  // Dropdown options
+  final List<String> practiceTimes = ['30', '45', '60', '75', '90'];
+  final List<String> drillTimes = ['5', '10', '15', '20'];
+  final List<String> categories = ["All", "Offense", "Defense", "Footwork", "Conditioning", "Strategy"];
+  final List<String> skillLevels = ['Beginner', 'Intermediate', 'Advanced'];
+
+  // Checkbox selections
+  Map<String, bool> focusAreas = {
+    'Speed': false,
+    'Agility': false,
+    'Defense': false,
+    'Passing': false,
+    'Conditioning': false,
+    'Teamwork': false,
+  };
+
   List<Map<String, dynamic>> drills = [];
-  List<String> categories = ["All", "Offense", "Defense", "Footwork", "Conditioning", "Strategy"];
-
-void fetchDrills() async {
-  FirebaseFirestore.instance.collection('drills').get().then((querySnapshot) {
-    setState(() {
-      drills = querySnapshot.docs.map((doc) => doc.data()).toList();
-    });
-    if (kDebugMode) {
-      print("Fetched drills: $drills");
-    } // Debugging output
-  }).catchError((error) {
-    if (kDebugMode) {
-      print("Error fetching drills: $error");
-    } // Debugging output
-  });
-}
-
   List<Map<String, dynamic>> selectedDrills = [];
 
+  // Fetch drills from Firestore
+  void fetchDrills() async {
+    FirebaseFirestore.instance.collection('drills').get().then((querySnapshot) {
+      setState(() {
+        drills = querySnapshot.docs.map((doc) => doc.data()).toList();
+      });
+      if (kDebugMode) {
+        print("Fetched drills: $drills");
+      } // Debugging output
+    }).catchError((error) {
+      if (kDebugMode) {
+        print("Error fetching drills: $error");
+      } // Debugging output
+    });
+  }
+
+  // Generate practice plan logic
 void generatePracticePlan() {
-  if (drills.isEmpty) {
+  if (drills.isEmpty || selectedPracticeTime == null || selectedDrillTime == null) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("No drills available. Please try again later.")),
+      const SnackBar(content: Text("Please fill out all fields and ensure drills are loaded.")),
     );
     return;
   }
 
-  int practiceMinutes = int.tryParse(practiceTimeController.text) ?? 0;
-  int drillMinutes = int.tryParse(drillTimeController.text) ?? 0;
+  int practiceMinutes = int.tryParse(selectedPracticeTime!) ?? 0;
+  int drillMinutes = int.tryParse(selectedDrillTime!) ?? 0;
 
   if (practiceMinutes == 0 || drillMinutes == 0 || drillMinutes > practiceMinutes) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -55,6 +71,7 @@ void generatePracticePlan() {
     return;
   }
 
+  // Filter drills by category
   List<Map<String, dynamic>> filteredDrills = selectedCategory == "All"
       ? drills
       : drills.where((drill) => drill["category"] == selectedCategory).toList();
@@ -67,7 +84,15 @@ void generatePracticePlan() {
   }
 
   int numDrills = practiceMinutes ~/ drillMinutes;
-  List<Map<String, dynamic>> selectedDrills = filteredDrills.take(numDrills).toList();
+
+  // Override drill time with user selection
+  List<Map<String, dynamic>> selectedDrills = filteredDrills
+      .take(numDrills)
+      .map((drill) => {
+            ...drill,
+            "time": drillMinutes,
+          })
+      .toList();
 
   // Navigate to the new practice plan page where it displays drills
   Navigator.push(
@@ -88,64 +113,100 @@ void generatePracticePlan() {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Practice Plan")),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text("Practice Plan"),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            DropdownButton<String>(
-              value: selectedCategory,
-              onChanged: (newValue) {
-                setState(() {
-                  selectedCategory = newValue!;
-                });
-              },
-              items: categories.map((category) {
-                return DropdownMenuItem<String>(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Dropdown for total practice time
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Total Practice Duration (minutes)'),
+                value: selectedPracticeTime,
+                items: practiceTimes.map((time) => DropdownMenuItem(
+                  value: time,
+                  child: Text('$time minutes'),
+                )).toList(),
+                onChanged: (value) => setState(() => selectedPracticeTime = value),
+              ),
+              const SizedBox(height: 12),
+
+              // Dropdown for drill duration
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Time Per Drill (minutes)'),
+                value: selectedDrillTime,
+                items: drillTimes.map((time) => DropdownMenuItem(
+                  value: time,
+                  child: Text('$time minutes'),
+                )).toList(),
+                onChanged: (value) => setState(() => selectedDrillTime = value),
+              ),
+              const SizedBox(height: 12),
+
+              // Category selector
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Category'),
+                value: selectedCategory,
+                items: categories.map((category) => DropdownMenuItem(
                   value: category,
                   child: Text(category),
-                );
-              }).toList(),
-            ),
-            TextField(
-              controller: practiceTimeController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: "Total Practice Duration (minutes)"),
-            ),
-            TextField(
-              controller: drillTimeController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: "Time Per Drill (minutes)"),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: generatePracticePlan,
-              child: const Text("Generate Practice Plan"),
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: ListView.builder(
-                itemCount: selectedDrills.length,
-                itemBuilder: (context, index) {
-                  String videoId = YoutubePlayer.convertUrlToId(selectedDrills[index]["url"]!)!;
-                  return Card(
-                    child: Column(
-                      children: [
-                        ListTile(title: Text(selectedDrills[index]["title"]!)),
-                        YoutubePlayer(
-                          controller: YoutubePlayerController(
-                            initialVideoId: videoId,
-                            flags: const YoutubePlayerFlags(autoPlay: false),
-                          ),
-                          showVideoProgressIndicator: true,
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                )).toList(),
+                onChanged: (value) => setState(() => selectedCategory = value!),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+
+              // Skill level dropdown
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Skill Level'),
+                value: selectedSkillLevel,
+                items: skillLevels.map((level) => DropdownMenuItem(
+                  value: level,
+                  child: Text(level),
+                )).toList(),
+                onChanged: (value) => setState(() => selectedSkillLevel = value!),
+              ),
+              const SizedBox(height: 12),
+
+              // Focus areas
+              const Text('Focus Areas', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ...focusAreas.keys.map((area) => CheckboxListTile(
+                title: Text(area),
+                value: focusAreas[area],
+                activeColor: Colors.deepPurple,
+                onChanged: (value) {
+                  setState(() {
+                    focusAreas[area] = value!;
+                  });
+                },
+              )),
+
+              const SizedBox(height: 20),
+
+              // Generate button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: generatePracticePlan,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text("Generate Practice Plan"),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

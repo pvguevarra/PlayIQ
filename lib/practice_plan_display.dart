@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'drill_detail_page.dart'; 
+import 'drill_detail_page.dart';
 
 class PracticePlanDisplayPage extends StatelessWidget {
   final List<Map<String, dynamic>> selectedDrills;
@@ -9,30 +9,68 @@ class PracticePlanDisplayPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Here's Your Practice Plan!")),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text("Here's Your Practice Plan!"),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView.builder(
           itemCount: selectedDrills.length,
           itemBuilder: (context, index) {
-            return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        DrillDetailPage(drill: selectedDrills[index]),
+            final drill = selectedDrills[index];
+            final title = drill["title"] ?? "Untitled Drill";
+            final category = drill["category"] ?? "Unknown";
+            final time = drill["time"]?.toString() ?? "N/A";
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DrillDetailPage(drill: drill),
+                    ),
+                  );
+                },
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                );
-              },
-              child: Card(
-                margin: const EdgeInsets.symmetric(vertical: 8.0),
-                child: ListTile(
-                  title: Text(selectedDrills[index]["title"] ?? "Unknown"),
-                  subtitle: Text(
-                    "Category: ${selectedDrills[index]["category"] ?? "N/A"}, Time: ${selectedDrills[index]["time"] ?? "N/A"} mins",
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14.0, horizontal: 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        // Subtitle (category + time)
+                        Text(
+                          "Category: $category | Time: $time min",
+                          style: TextStyle(
+                            color: Colors.deepPurple.shade400,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  trailing: const Icon(Icons.arrow_forward_ios),
                 ),
               ),
             );
