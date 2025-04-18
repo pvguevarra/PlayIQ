@@ -9,6 +9,40 @@ import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:playiq/models/current_user.dart';
+import 'package:playiq/practice_plan_display.dart';
+
+
+void openPracticePlanPage(BuildContext context) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    final teamId = userDoc['teamId'];
+
+    final teamDoc = await FirebaseFirestore.instance
+        .collection('teams')
+        .doc(teamId)
+        .get();
+
+    if (teamDoc.exists && teamDoc.data()?['currentPlan'] != null) {
+      final savedPlan = List<Map<String, dynamic>>.from(teamDoc['currentPlan']);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PracticePlanDisplayPage(selectedDrills: savedPlan),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PracticePlanPage()),
+      );
+    }
+  }
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -365,13 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const PracticePlanPage()),
-                );
-              },
+              onTap: () => openPracticePlanPage(context),
               child: Container(
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
