@@ -3,11 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:playiq/drill_detail_page.dart';
 import 'package:playiq/practice_plan_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+//import 'package:playiq/home_screen.dart';
 
 class PracticePlanDisplayPage extends StatefulWidget {
   final List<Map<String, dynamic>> selectedDrills;
+  final DateTime practiceDate;
 
-  const PracticePlanDisplayPage({super.key, required this.selectedDrills});
+  const PracticePlanDisplayPage({
+    super.key,
+    required this.selectedDrills,
+    required this.practiceDate,
+  });
 
   @override
   State<PracticePlanDisplayPage> createState() =>
@@ -21,6 +27,60 @@ class _PracticePlanDisplayPageState extends State<PracticePlanDisplayPage> {
   void initState() {
     super.initState();
     _drills = List<Map<String, dynamic>>.from(widget.selectedDrills);
+  }
+
+  void _markAsCompleted(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final teamId = userDoc['teamId'];
+
+      // Delete currentPlan & practiceDate
+      await FirebaseFirestore.instance.collection('teams').doc(teamId).update({
+        'currentPlan': FieldValue.delete(),
+        'practiceDate': FieldValue.delete(),
+      });
+
+      // Delete matching event
+      final existing = await FirebaseFirestore.instance
+          .collection('events')
+          .where('teamId', isEqualTo: teamId)
+          .where('title', isEqualTo: 'Practice Plan')
+          .where('timestamp', isEqualTo: widget.practiceDate)
+          .get();
+
+      for (var doc in existing.docs) {
+        await FirebaseFirestore.instance
+            .collection('events')
+            .doc(doc.id)
+            .delete();
+      }
+
+      // Delay to let Firestore updates 
+      await Future.delayed(const Duration(milliseconds: 150));
+
+if (context.mounted) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text("Practice Plan Completed"),
+      content: const Text("The plan has been deleted."),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context); // close dialog
+          },
+          child: const Text("OK"),
+        ),
+      ],
+    ),
+  );
+}
+
+    }
   }
 
   // Reorder drills in the list
@@ -45,8 +105,7 @@ class _PracticePlanDisplayPageState extends State<PracticePlanDisplayPage> {
         await FirebaseFirestore.instance.collection('drills').get();
 
     final options = snapshot.docs
-        .map((doc) =>
-            Map<String, dynamic>.from(doc.data()))
+        .map((doc) => Map<String, dynamic>.from(doc.data()))
         .where((d) => d['title'] != _drills[index]['title'])
         .toList();
 
@@ -313,6 +372,18 @@ class _PracticePlanDisplayPageState extends State<PracticePlanDisplayPage> {
                   onPressed: _resetPlan,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    textStyle: const TextStyle(fontSize: 14),
+                  ),
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text("Complete"),
+                  onPressed: () => _markAsCompleted(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 10),

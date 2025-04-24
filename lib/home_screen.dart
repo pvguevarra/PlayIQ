@@ -11,39 +11,6 @@ import 'package:geocoding/geocoding.dart';
 import 'package:playiq/models/current_user.dart';
 import 'package:playiq/practice_plan_display.dart';
 
-
-void openPracticePlanPage(BuildContext context) async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user != null) {
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
-
-    final teamId = userDoc['teamId'];
-
-    final teamDoc = await FirebaseFirestore.instance
-        .collection('teams')
-        .doc(teamId)
-        .get();
-
-    if (teamDoc.exists && teamDoc.data()?['currentPlan'] != null) {
-      final savedPlan = List<Map<String, dynamic>>.from(teamDoc['currentPlan']);
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => PracticePlanDisplayPage(selectedDrills: savedPlan),
-        ),
-      );
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const PracticePlanPage()),
-      );
-    }
-  }
-}
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -52,17 +19,114 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  DateTime? practiceDate;
+  Map<String, dynamic>? currentPlan;
+
+  @override
+  void initState() {
+    super.initState();
+    setupPracticePlanListener();
+  }
+
+  void openPracticePlanPage(BuildContext context) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final teamId = userDoc['teamId'];
+
+      final teamDoc = await FirebaseFirestore.instance
+          .collection('teams')
+          .doc(teamId)
+          .get();
+
+      if (teamDoc.exists && teamDoc.data()?['currentPlan'] != null) {
+        final savedPlan =
+            List<Map<String, dynamic>>.from(teamDoc['currentPlan']);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PracticePlanDisplayPage(
+              selectedDrills: savedPlan,
+              practiceDate: practiceDate!,
+            ),
+          ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PracticePlanPage()),
+        );
+      }
+    }
+  }
+
+void setupPracticePlanListener() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final teamId = userDoc['teamId'];
+
+    FirebaseFirestore.instance
+        .collection('teams')
+        .doc(teamId)
+        .snapshots()
+        .listen((docSnapshot) async {
+      if (!docSnapshot.exists) return;
+
+      final data = docSnapshot.data();
+      if (data == null) return;
+
+      // If plan and date exist and are valid
+      if (data['currentPlan'] != null && data['practiceDate'] != null) {
+        final plan = List<Map<String, dynamic>>.from(data['currentPlan']);
+        final dateTime = (data['practiceDate'] as Timestamp).toDate();
+
+        if (dateTime.isAfter(DateTime.now())) {
+          setState(() {
+            currentPlan = {'drills': plan};
+            practiceDate = dateTime;
+          });
+          return;
+        }
+      }
+
+      // Only clear if BOTH are truly missing or invalid
+      if (data['currentPlan'] == null && data['practiceDate'] == null) {
+        setState(() {
+          currentPlan = null;
+          practiceDate = null;
+        });
+      }
+    });
+  }
+}
+
+
+  void openPracticePlan() {
+    if (currentPlan != null) {
+      final drills = List<Map<String, dynamic>>.from(currentPlan!['drills']);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PracticePlanDisplayPage(
+            selectedDrills: drills,
+            practiceDate:
+                practiceDate!, // or practiceDate! if you’re passing it from Home
+          ),
+        ),
+      );
+    }
+  }
+
   Color purple = const Color(0xFF800080);
   Color grey = const Color(0xFF808080);
 
   final String _apiKey = "e55f958eae154f0085471252252702";
   Map<String, dynamic> _weatherInfo = {};
-
-  @override
-  void initState() {
-    super.initState();
-    fetchWeather();
-  }
 
 // Requests permissions and fetches weather data from WeatherAPI
   Future<void> fetchWeather() async {
@@ -285,14 +349,66 @@ class _HomeScreenState extends State<HomeScreen> {
             return Column(
               children: events.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
-                return Card(
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
-                  child: ListTile(
-                    leading: Icon(Icons.event, color: purple),
-                    title: Text(data['title'] ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text("${data['date']} at ${data['time']}"),
+                final DateTime? ts = data['timestamp'] != null
+                    ? (data['timestamp'] as Timestamp).toDate()
+                    : null;
+                final isPracticePlan = data['title'] == 'Practice Plan';
+if (isPracticePlan && (practiceDate == null || currentPlan == null)) {
+  return const SizedBox.shrink(); // hide ghost tile
+}
+
+
+                return GestureDetector(
+                  onTap: isPracticePlan &&
+                          currentPlan != null &&
+                          practiceDate != null
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PracticePlanDisplayPage(
+                                selectedDrills: List<Map<String, dynamic>>.from(
+                                    currentPlan!['drills']),
+                                practiceDate: practiceDate!,
+                              ),
+                            ),
+                          );
+                        }
+                      : null,
+                  child: Container(
+                    width: double.infinity,
+                    margin:
+                        const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.shade50,
+                      border: Border.all(color: Colors.deepPurple),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.event, color: purple),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              data['title'] ?? '',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              ts != null
+                                  ? "${ts.month}/${ts.day} @ ${ts.hour}:${ts.minute.toString().padLeft(2, '0')}"
+                                  : "No time",
+                              style: const TextStyle(
+                                  fontSize: 13, fontStyle: FontStyle.italic),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }).toList(),
@@ -531,7 +647,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     // Debugging: Print the current user role
     // Delete later on
-    print('Current User Role: ${CurrentUser().role}');
+    if (kDebugMode) {
+      print('Current User Role: ${CurrentUser().role}');
+    }
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(

@@ -14,11 +14,10 @@ class PracticePlanPage extends StatefulWidget {
 class _PracticePlanPageState extends State<PracticePlanPage> {
   String? selectedPracticeTime;
   String? selectedDrillTime;
-  String selectedSkillLevel = 'Beginner';
+  DateTime? selectedDateTime;
 
   final List<String> practiceTimes = ['30', '45', '60', '75', '90'];
   final List<String> drillTimes = ['5', '10', '15', '20'];
-  final List<String> skillLevels = ['Beginner', 'Intermediate', 'Advanced'];
 
   // Multi-select category filters
   Map<String, bool> categoryFilters = {
@@ -68,10 +67,37 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                PracticePlanDisplayPage(selectedDrills: selectedDrills),
+            builder: (context) => PracticePlanDisplayPage(
+              selectedDrills: selectedDrills,
+              practiceDate: selectedDateTime!,
+            ),
           ),
         );
+      }
+    }
+  }
+
+  // Pick date and time for practice
+  void _pickDateTime() async {
+    DateTime now = DateTime.now();
+    DateTime? date = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: now,
+      lastDate: DateTime(now.year + 1),
+    );
+
+    if (date != null) {
+      TimeOfDay? time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (time != null) {
+        setState(() {
+          selectedDateTime =
+              DateTime(date.year, date.month, date.day, time.hour, time.minute);
+        });
       }
     }
   }
@@ -80,26 +106,17 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
   void generatePracticePlan() async {
     if (drills.isEmpty ||
         selectedPracticeTime == null ||
-        selectedDrillTime == null) {
+        selectedDrillTime == null ||
+        selectedDateTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text(
-                "Please fill out all fields and ensure drills are loaded.")),
+        const SnackBar(content: Text("Please fill out all fields.")),
       );
       return;
     }
 
-    int practiceMinutes = int.tryParse(selectedPracticeTime!) ?? 0;
-    int drillMinutes = int.tryParse(selectedDrillTime!) ?? 0;
-
-    if (practiceMinutes == 0 ||
-        drillMinutes == 0 ||
-        drillMinutes > practiceMinutes) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid practice or drill time.")),
-      );
-      return;
-    }
+    int practiceMinutes = int.parse(selectedPracticeTime!);
+    int drillMinutes = int.parse(selectedDrillTime!);
+    int numDrills = practiceMinutes ~/ drillMinutes;
 
     final selectedCategories = categoryFilters.entries
         .where((entry) => entry.value)
@@ -111,16 +128,6 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
         : drills
             .where((drill) => selectedCategories.contains(drill["category"]))
             .toList();
-
-    if (filteredDrills.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("No drills found for the selected categories.")),
-      );
-      return;
-    }
-
-    int numDrills = practiceMinutes ~/ drillMinutes;
 
     List<Map<String, dynamic>> newPlan = filteredDrills
         .take(numDrills)
@@ -138,17 +145,54 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
           .get();
       final teamId = userDoc['teamId'];
 
-      await FirebaseFirestore.instance.collection('teams').doc(teamId).update({
+      // Save plan to teams collection
+      await FirebaseFirestore.instance.collection('teams').doc(teamId).set({
         'currentPlan': newPlan,
+        'practiceDate': selectedDateTime,
         'generatedAt': FieldValue.serverTimestamp(),
         'generatedBy': user.uid,
-      });
+      }, SetOptions(merge: true));
+
+      // Add event directly during generation
+
+      if (selectedDateTime != null) {
+        // Delete previous Practice Plan events before adding new one
+        final previous = await FirebaseFirestore.instance
+            .collection('events')
+            .where('teamId', isEqualTo: teamId)
+            .where('title', isEqualTo: 'Practice Plan')
+            .get();
+
+        for (var doc in previous.docs) {
+          await FirebaseFirestore.instance
+              .collection('events')
+              .doc(doc.id)
+              .delete();
+        }
+
+        final existing = await FirebaseFirestore.instance
+            .collection('events')
+            .where('teamId', isEqualTo: teamId)
+            .where('title', isEqualTo: 'Practice Plan')
+            .where('timestamp', isEqualTo: selectedDateTime)
+            .get();
+
+        if (existing.docs.isEmpty) {
+          await FirebaseFirestore.instance.collection('events').add({
+            'title': 'Practice Plan',
+            'type': 'practice',
+            'teamId': teamId,
+            'timestamp': selectedDateTime,
+          });
+        }
+      }
     }
 
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => PracticePlanDisplayPage(selectedDrills: newPlan),
+        builder: (_) => PracticePlanDisplayPage(
+            selectedDrills: newPlan, practiceDate: selectedDateTime!),
       ),
     );
   }
@@ -205,18 +249,16 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
                 onChanged: (value) => setState(() => selectedDrillTime = value),
               ),
               const SizedBox(height: 12),
-              // Dropdown for skill level
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: 'Skill Level'),
-                value: selectedSkillLevel,
-                items: skillLevels
-                    .map((level) => DropdownMenuItem(
-                          value: level,
-                          child: Text(level),
-                        ))
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => selectedSkillLevel = value!),
+              // Date/time picker
+              TextButton.icon(
+                onPressed: _pickDateTime,
+                icon: const Icon(Icons.calendar_today),
+                label: Text(
+                  selectedDateTime != null
+                      ? "Practice Date: ${selectedDateTime!.month}/${selectedDateTime!.day} @ ${selectedDateTime!.hour}:${selectedDateTime!.minute.toString().padLeft(2, '0')}"
+                      : "Select Practice Date & Time",
+                  style: const TextStyle(fontSize: 16),
+                ),
               ),
               const SizedBox(height: 16),
               // Multi-select for categories
