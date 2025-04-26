@@ -1,8 +1,10 @@
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
+// Community Page 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
 
@@ -11,6 +13,14 @@ class CommunityPage extends StatefulWidget {
 }
 
 class _CommunityPageState extends State<CommunityPage> {
+  
+  // Set to keep track of expanded posts
+  Set<String> expandedPosts = {};
+
+  // Tracks if we are sorting by newest or top posts
+  String sortOption = 'newest'; 
+
+  // Opens the modal to create a new post
   void _openPostModal() {
     showModalBottomSheet(
       context: context,
@@ -19,80 +29,230 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
+  // Toggles the expansion of a post
+  void togglePostExpansion(String postId) {
+    setState(() {
+      if (expandedPosts.contains(postId)) {
+        expandedPosts.remove(postId);
+      } else {
+        expandedPosts.add(postId);
+      }
+    });
+  }
+
+  // Builds each post card
   Widget _buildPostCard(DocumentSnapshot document) {
     Map<String, dynamic> data = document.data() as Map<String, dynamic>;
     String postId = document.id;
+    final currentUser = FirebaseAuth.instance.currentUser;
+
     int upvotes = data['upvotes'] ?? 0;
     int downvotes = data['downvotes'] ?? 0;
+    Map<String, dynamic> userVotes = data['userVotes'] ?? {};
 
-void updateVotes(String type) async {
-  DocumentReference postRef =
-      FirebaseFirestore.instance.collection('community_posts').doc(postId);
+    // Check if the current user has voted on this post
+    String? myVote = currentUser != null ? userVotes[currentUser.uid] : null;
 
-  await FirebaseFirestore.instance.runTransaction((transaction) async {
-    DocumentSnapshot snapshot = await transaction.get(postRef);
-
-    if (!snapshot.exists) return;
-
-    int currentUpvotes = snapshot['upvotes'] ?? 0;
-    int currentDownvotes = snapshot['downvotes'] ?? 0;
-
-    if (type == 'upvote') {
-      transaction.update(postRef, {'upvotes': currentUpvotes + 1});
-    } else if (type == 'downvote') {
-      transaction.update(postRef, {'downvotes': currentDownvotes + 1});
-    }
-  }).then((_) async {
-    DocumentSnapshot updatedSnapshot = await postRef.get();
-    setState(() {
-      upvotes = updatedSnapshot['upvotes'];
-      downvotes = updatedSnapshot['downvotes'];
-    });
-  }).catchError((error) {
-    if (kDebugMode) {
-      print("Error updating votes: $error");
-    } // Debugging output
-  });
-}
-
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(data['title'],
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 5),
-            Text(data['content']),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return StatefulBuilder(
+      builder: (context, setState) => GestureDetector(
+        onTap: () => togglePostExpansion(postId),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.deepPurple.shade50,
+              border: Border.all(color: Colors.deepPurple.shade100),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("#${data['category']}",
-                    style: const TextStyle(color: Colors.grey)),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_upward, color: Colors.green),
-                      onPressed: () => updateVotes('upvote'),
+                    Expanded(
+                      child: Text(
+                        data['title'] ?? '',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    Text(upvotes.toString()),
-                    const SizedBox(width: 10),
-                    IconButton(
-                      icon: const Icon(Icons.arrow_downward, color: Colors.red),
-                      onPressed: () => updateVotes('downvote'),
+                    Icon(
+                      expandedPosts.contains(postId)
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      color: Colors.deepPurple,
                     ),
-                    Text(downvotes.toString()),
                   ],
                 ),
+                const SizedBox(height: 6),
+                // Post Content
+                Text(
+                  data['content'] ?? '',
+                  maxLines: expandedPosts.contains(postId) ? null : 2,
+                  overflow: expandedPosts.contains(postId)
+                      ? TextOverflow.visible
+                      : TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: Colors.grey[800], fontSize: 14, height: 1.4),
+                ),
+                const SizedBox(height: 12),
+                // Category and Vote Count
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple.shade100,
+                        borderRadius: BorderRadius.circular(50),
+                      ),
+                      child: Text(
+                        '#${data['category'] ?? 'General'}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepPurple,
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        IconButton(
+                          // Upvote button
+                          icon: Icon(Icons.arrow_upward,
+                              color: myVote == 'upvote'
+                                  ? Colors.green
+                                  : Colors.grey),
+                          onPressed: () async {
+                            if (currentUser == null) return;
+                            final postRef = FirebaseFirestore.instance
+                                .collection('community_posts')
+                                .doc(postId);
+
+                            if (myVote == 'upvote') {
+                              await postRef.update({
+                                'upvotes': FieldValue.increment(-1),
+                                'userVotes.${currentUser.uid}':
+                                    FieldValue.delete(),
+                              });
+                              setState(() {
+                                upvotes--;
+                                myVote = null;
+                              });
+                            } else if (myVote == 'downvote') {
+                              await postRef.update({
+                                'upvotes': FieldValue.increment(1),
+                                'downvotes': FieldValue.increment(-1),
+                                'userVotes.${currentUser.uid}': 'upvote',
+                              });
+                              setState(() {
+                                upvotes++;
+                                downvotes--;
+                                myVote = 'upvote';
+                              });
+                            } else {
+                              await postRef.update({
+                                'upvotes': FieldValue.increment(1),
+                                'userVotes.${currentUser.uid}': 'upvote',
+                              });
+                              setState(() {
+                                upvotes++;
+                                myVote = 'upvote';
+                              });
+                            }
+                          },
+                        ),
+                        // AnimatedSwitcher for upvote count
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: Text('$upvotes',
+                              key: ValueKey<int>(upvotes),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          // Downvote button
+                          icon: Icon(Icons.arrow_downward,
+                              color: myVote == 'downvote'
+                                  ? Colors.red
+                                  : Colors.grey),
+                          onPressed: () async {
+                            if (currentUser == null) return;
+                            final postRef = FirebaseFirestore.instance
+                                .collection('community_posts')
+                                .doc(postId);
+
+                            if (myVote == 'downvote') {
+                              await postRef.update({
+                                'downvotes': FieldValue.increment(-1),
+                                'userVotes.${currentUser.uid}':
+                                    FieldValue.delete(),
+                              });
+                              setState(() {
+                                downvotes--;
+                                myVote = null;
+                              });
+                            } else if (myVote == 'upvote') {
+                              await postRef.update({
+                                'upvotes': FieldValue.increment(-1),
+                                'downvotes': FieldValue.increment(1),
+                                'userVotes.${currentUser.uid}': 'downvote',
+                              });
+                              setState(() {
+                                upvotes--;
+                                downvotes++;
+                                myVote = 'downvote';
+                              });
+                            } else {
+                              await postRef.update({
+                                'downvotes': FieldValue.increment(1),
+                                'userVotes.${currentUser.uid}': 'downvote',
+                              });
+                              setState(() {
+                                downvotes++;
+                                myVote = 'downvote';
+                              });
+                            }
+                          },
+                        ),
+                        // AnimatedSwitcher for downvote count
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: Text('$downvotes',
+                              key: ValueKey<int>(downvotes),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // Timestamp
+                Text(
+                  data['timestamp'] != null
+                      ? timeago
+                          .format((data['timestamp'] as Timestamp).toDate())
+                      : '',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                ),
+                if (expandedPosts.contains(postId)) ...[
+                  const Divider(height: 30),
+                  CommentSection(postId: postId),
+                ]
               ],
             ),
-            CommentSection(postId: document.id),
-          ],
+          ),
         ),
       ),
     );
@@ -101,21 +261,68 @@ void updateVotes(String type) async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Community")),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('community_posts')
-            .orderBy('upvotes', descending: true) // Sorting by most upvoted
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return ListView(
-            children:
-                snapshot.data!.docs.map((doc) => _buildPostCard(doc)).toList(),
-          );
-        },
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          "Community",
+          style: TextStyle(color: Colors.black),
+        ),
+      ),
+      body: Column(
+        children: [
+          // Sort Dropdown
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const Text(
+                  "Sort by: ",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                DropdownButton<String>(
+                  value: sortOption,
+                  items: const [
+                    DropdownMenuItem(value: 'newest', child: Text('New')),
+                    DropdownMenuItem(value: 'top', child: Text('Top')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() {
+                        sortOption = value;
+                      });
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          // Post List
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('community_posts')
+                  .orderBy(sortOption == 'newest' ? 'timestamp' : 'upvotes',
+                      descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text('No posts yet.'));
+                }
+                return ListView(
+                  children: snapshot.data!.docs.map(_buildPostCard).toList(),
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _openPostModal,
@@ -126,8 +333,9 @@ void updateVotes(String type) async {
   }
 }
 
+
 class CommentSection extends StatefulWidget {
-  final String postId;
+  final String postId; // Post ID to fetch comments for
   const CommentSection({super.key, required this.postId});
 
   @override
@@ -138,7 +346,7 @@ class _CommentSectionState extends State<CommentSection> {
   final TextEditingController _commentController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  String username = "Anonymous"; // Default username
+  String _username = "Anonymous";
 
   @override
   void initState() {
@@ -146,34 +354,32 @@ class _CommentSectionState extends State<CommentSection> {
     _fetchUsername();
   }
 
- 
-  void _fetchUsername() async {
-    User? user = _auth.currentUser;
+  // Fetches the username of the current user
+  Future<void> _fetchUsername() async {
+    final user = _auth.currentUser;
     if (user != null) {
-      DocumentSnapshot userDoc =
-          await _firestore.collection('users').doc(user.uid).get();
-
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
       if (userDoc.exists) {
         setState(() {
-          username = userDoc['username']; // Set the username from Firestore
+          _username = userDoc['username'] ?? "Anonymous";
         });
       }
     }
   }
 
-
-  void _addComment() async {
-    if (_commentController.text.isNotEmpty) {
+  // Adds a comment to the post
+  Future<void> _addComment() async {
+    final user = _auth.currentUser;
+    if (user != null && _commentController.text.isNotEmpty) {
       await _firestore
           .collection('community_posts')
           .doc(widget.postId)
           .collection('comments')
           .add({
-        'author': username, // Use the fetched username
+        'author': _username,
         'content': _commentController.text,
         'timestamp': FieldValue.serverTimestamp(),
       });
-
       _commentController.clear();
     }
   }
@@ -181,8 +387,8 @@ class _CommentSectionState extends State<CommentSection> {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Comment List
         StreamBuilder<QuerySnapshot>(
           stream: _firestore
               .collection('community_posts')
@@ -197,9 +403,7 @@ class _CommentSectionState extends State<CommentSection> {
                 Map<String, dynamic> comment =
                     doc.data() as Map<String, dynamic>;
                 return ListTile(
-                  leading: CircleAvatar(
-                      child:
-                          Text(comment['author'][0])), // First letter of name
+                  leading: CircleAvatar(child: Text(comment['author'][0])),
                   title: Text(comment['author'],
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(comment['content']),
@@ -208,8 +412,9 @@ class _CommentSectionState extends State<CommentSection> {
             );
           },
         ),
+        // Comment Input Field
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Row(
             children: [
               Expanded(
@@ -227,12 +432,13 @@ class _CommentSectionState extends State<CommentSection> {
               ),
             ],
           ),
-        ),
+        )
       ],
     );
   }
 }
 
+// modal for creating a new community post
 class CreatePostModal extends StatefulWidget {
   const CreatePostModal({super.key});
 
@@ -241,63 +447,79 @@ class CreatePostModal extends StatefulWidget {
 }
 
 class _CreatePostModalState extends State<CreatePostModal> {
-  final TextEditingController _postTitleController = TextEditingController();
-  final TextEditingController _postContentController = TextEditingController();
-  String selectedCategory = "General";
-  List<String> categories = ["Strategy", "Training", "General", "Game Film"];
-
-  void _createPost() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) return; // Ensure user is logged in
-
-    if (_postTitleController.text.isNotEmpty &&
-        _postContentController.text.isNotEmpty) {
-      await FirebaseFirestore.instance.collection('community_posts').add({
-        'title': _postTitleController.text,
-        'content': _postContentController.text,
-        'category': selectedCategory,
-        'author': user.displayName ?? "Anonymous",
-        'timestamp': FieldValue.serverTimestamp(),
-        'upvotes': 0,
-        //'reactions': {'🔥': 0, '🎯': 0, '🏆': 0},
-      });
-
-      Navigator.pop(context);
-    }
-  }
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _contentController = TextEditingController();
+  String selectedCategory = "General"; // default selected category
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        height: 350,
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Create a Post",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            // Title of the modal
+            const Text(
+              "Create a Post",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            // Input for post title
             TextField(
-                controller: _postTitleController,
-                decoration: const InputDecoration(labelText: "Title")),
-            TextField(
-                controller: _postContentController,
-                decoration: const InputDecoration(labelText: "Content")),
-            DropdownButton<String>(
-              value: selectedCategory,
-              onChanged: (value) => setState(() => selectedCategory = value!),
-              items: categories
-                  .map((category) =>
-                      DropdownMenuItem(value: category, child: Text(category)))
-                  .toList(),
+              controller: _titleController,
+              decoration: const InputDecoration(labelText: "Title"),
             ),
             const SizedBox(height: 10),
-            ElevatedButton(onPressed: _createPost, child: const Text("Post")),
+            // Input for post content
+            TextField(
+              controller: _contentController,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: "Content"),
+            ),
+            const SizedBox(height: 10),
+            // Dropdown to pick post category
+            DropdownButton<String>(
+              value: selectedCategory,
+              onChanged: (val) => setState(() => selectedCategory = val!),
+              items: ["Strategy", "Training", "General", "Game Film"]
+                  .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                  .toList(),
+            ),
+            const SizedBox(height: 20),
+            // post button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  if (_titleController.text.isNotEmpty && _contentController.text.isNotEmpty) {
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user == null) return;
+                    await FirebaseFirestore.instance.collection('community_posts').add({
+                      'title': _titleController.text,
+                      'content': _contentController.text,
+                      'category': selectedCategory,
+                      'author': user.displayName ?? "Anonymous",
+                      'timestamp': FieldValue.serverTimestamp(),
+                      'upvotes': 0,
+                      'downvotes': 0,
+                      'userVotes': {},
+                    });
+                    Navigator.pop(context); // Close the modal after posting
+                  }
+                },
+                child: const Text("Post"),
+              ),
+            )
           ],
         ),
       ),
     );
   }
 }
+
