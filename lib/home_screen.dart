@@ -3,8 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:playiq/playbook_page.dart';
 import 'package:playiq/practice_plan_page.dart';
-import 'package:playiq/gameplan_page.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -26,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     setupPracticePlanListener();
+    fetchWeather();
   }
 
   void openPracticePlanPage(BuildContext context) async {
@@ -64,47 +65,49 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-void setupPracticePlanListener() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user != null) {
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-    final teamId = userDoc['teamId'];
+  void setupPracticePlanListener() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final teamId = userDoc['teamId'];
 
-    FirebaseFirestore.instance
-        .collection('teams')
-        .doc(teamId)
-        .snapshots()
-        .listen((docSnapshot) async {
-      if (!docSnapshot.exists) return;
+      FirebaseFirestore.instance
+          .collection('teams')
+          .doc(teamId)
+          .snapshots()
+          .listen((docSnapshot) async {
+        if (!docSnapshot.exists) return;
 
-      final data = docSnapshot.data();
-      if (data == null) return;
+        final data = docSnapshot.data();
+        if (data == null) return;
 
-      // If plan and date exist and are valid
-      if (data['currentPlan'] != null && data['practiceDate'] != null) {
-        final plan = List<Map<String, dynamic>>.from(data['currentPlan']);
-        final dateTime = (data['practiceDate'] as Timestamp).toDate();
+        // If plan and date exist and are valid
+        if (data['currentPlan'] != null && data['practiceDate'] != null) {
+          final plan = List<Map<String, dynamic>>.from(data['currentPlan']);
+          final dateTime = (data['practiceDate'] as Timestamp).toDate();
 
-        if (dateTime.isAfter(DateTime.now())) {
-          setState(() {
-            currentPlan = {'drills': plan};
-            practiceDate = dateTime;
-          });
-          return;
+          if (dateTime.isAfter(DateTime.now())) {
+            setState(() {
+              currentPlan = {'drills': plan};
+              practiceDate = dateTime;
+            });
+            return;
+          }
         }
-      }
 
-      // Only clear if BOTH are truly missing or invalid
-      if (data['currentPlan'] == null && data['practiceDate'] == null) {
-        setState(() {
-          currentPlan = null;
-          practiceDate = null;
-        });
-      }
-    });
+        // Only clear if BOTH are truly missing or invalid
+        if (data['currentPlan'] == null && data['practiceDate'] == null) {
+          setState(() {
+            currentPlan = null;
+            practiceDate = null;
+          });
+        }
+      });
+    }
   }
-}
-
 
   void openPracticePlan() {
     if (currentPlan != null) {
@@ -353,10 +356,10 @@ void setupPracticePlanListener() async {
                     ? (data['timestamp'] as Timestamp).toDate()
                     : null;
                 final isPracticePlan = data['title'] == 'Practice Plan';
-if (isPracticePlan && (practiceDate == null || currentPlan == null)) {
-  return const SizedBox.shrink(); // hide ghost tile
-}
-
+                if (isPracticePlan &&
+                    (practiceDate == null || currentPlan == null)) {
+                  return const SizedBox.shrink(); // hide ghost tile
+                }
 
                 return GestureDetector(
                   onTap: isPracticePlan &&
@@ -542,7 +545,7 @@ if (isPracticePlan && (practiceDate == null || currentPlan == null)) {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const GamePlanPage()),
+                  MaterialPageRoute(builder: (context) => const PlaybookPage()),
                 );
               },
               child: Container(
@@ -553,9 +556,9 @@ if (isPracticePlan && (practiceDate == null || currentPlan == null)) {
                 ),
                 child: Column(
                   children: [
-                    const Icon(Icons.sports, color: Colors.white, size: 50),
+                    const Icon(Icons.book, color: Colors.white, size: 50),
                     const SizedBox(height: 10),
-                    const Text("Game Plan",
+                    const Text("Playbook",
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
