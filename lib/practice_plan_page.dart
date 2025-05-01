@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:playiq/practice_plan_display.dart';
-
+import 'package:playiq/models/current_user.dart';
 class PracticePlanPage extends StatefulWidget {
   const PracticePlanPage({super.key});
 
@@ -214,13 +214,13 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
+body: Padding(
+  padding: const EdgeInsets.all(16.0),
+  child: CurrentUser().role == 'coach'
+      ? SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Dropdown for practice time
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                     labelText: 'Total Practice Duration (minutes)'),
@@ -235,7 +235,6 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
                     setState(() => selectedPracticeTime = value),
               ),
               const SizedBox(height: 12),
-              // Dropdown for drill time
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                     labelText: 'Time Per Drill (minutes)'),
@@ -249,7 +248,6 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
                 onChanged: (value) => setState(() => selectedDrillTime = value),
               ),
               const SizedBox(height: 12),
-              // Date/time picker
               TextButton.icon(
                 onPressed: _pickDateTime,
                 icon: const Icon(Icons.calendar_today),
@@ -261,7 +259,6 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Multi-select for categories
               const Text(
                 'Categories',
                 style: TextStyle(
@@ -270,7 +267,6 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
                   color: Colors.black,
                 ),
               ),
-              // Checkbox for "Select All"
               CheckboxListTile(
                 title: const Text("Select All"),
                 value: selectAllCategories,
@@ -282,7 +278,6 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
                   });
                 },
               ),
-              // Checkbox for each category
               ...categoryFilters.keys.map((category) => CheckboxListTile(
                     title: Text(category),
                     value: categoryFilters[category],
@@ -290,16 +285,12 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
                     onChanged: (value) {
                       setState(() {
                         categoryFilters[category] = value!;
-                        if (categoryFilters.containsValue(false)) {
-                          selectAllCategories = false;
-                        } else {
-                          selectAllCategories = true;
-                        }
+                        selectAllCategories =
+                            !categoryFilters.containsValue(false);
                       });
                     },
                   )),
               const SizedBox(height: 20),
-              // Button to generate practice plan
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -318,8 +309,16 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
               ),
             ],
           ),
+        )
+      : const Center(
+          child: Text(
+            "Practice Plan Has Not Been Created Yet.",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
         ),
-      ),
+),
+
     );
   }
 }

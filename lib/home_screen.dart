@@ -218,64 +218,91 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _addNewEvent() {
     final titleController = TextEditingController();
-    final dateController = TextEditingController();
-    final timeController = TextEditingController();
+    DateTime? _selectedEventDateTime;
 
-    if (CurrentUser().role != 'coach')
-      return; //Safeguard so players can't trigger it
+    if (CurrentUser().role != 'coach') return;
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('Add New Event'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(labelText: 'Title'),
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('Add New Event'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: 'Title'),
+                ),
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    _selectedEventDateTime != null
+                        ? "${_selectedEventDateTime!.month}/${_selectedEventDateTime!.day} @ ${_selectedEventDateTime!.hour}:${_selectedEventDateTime!.minute.toString().padLeft(2, '0')}"
+                        : "Select Date & Time",
+                  ),
+                  onPressed: () async {
+                    DateTime now = DateTime.now();
+                    DateTime? date = await showDatePicker(
+                      context: context,
+                      initialDate: now,
+                      firstDate: now,
+                      lastDate: DateTime(now.year + 1),
+                    );
+
+                    if (date != null) {
+                      TimeOfDay? time = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
+
+                      if (time != null) {
+                        setState(() {
+                          _selectedEventDateTime = DateTime(
+                            date.year,
+                            date.month,
+                            date.day,
+                            time.hour,
+                            time.minute,
+                          );
+                        });
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
               ),
-              TextField(
-                controller: dateController,
-                decoration: const InputDecoration(labelText: 'Date'),
-              ),
-              TextField(
-                controller: timeController,
-                decoration: const InputDecoration(labelText: 'Time'),
+              ElevatedButton(
+                onPressed: () async {
+                  if (titleController.text.isNotEmpty &&
+                      _selectedEventDateTime != null) {
+                    final user = FirebaseAuth.instance.currentUser;
+                    final userDoc = await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user!.uid)
+                        .get();
+                    final teamId = userDoc['teamId'];
+
+                    await FirebaseFirestore.instance.collection('events').add({
+                      'title': titleController.text.trim(),
+                      'timestamp': _selectedEventDateTime,
+                      'teamId': teamId,
+                    });
+
+                    Navigator.of(context).pop();
+                  }
+                },
+                child: const Text('Add'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (titleController.text.isNotEmpty &&
-                    dateController.text.isNotEmpty &&
-                    timeController.text.isNotEmpty) {
-                  final user = FirebaseAuth.instance.currentUser;
-                  final userDoc = await FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(user!.uid)
-                      .get();
-                  final teamId = userDoc['teamId'];
-
-                  await FirebaseFirestore.instance.collection('events').add({
-                    'title': titleController.text,
-                    'date': dateController.text,
-                    'time': timeController.text,
-                    'teamId': teamId,
-                  });
-
-                  Navigator.of(context).pop();
-                }
-              },
-              child: const Text('Add'),
-            ),
-          ],
         );
       },
     );
@@ -356,64 +383,139 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? (data['timestamp'] as Timestamp).toDate()
                     : null;
                 final isPracticePlan = data['title'] == 'Practice Plan';
-                if (isPracticePlan &&
-                    (practiceDate == null || currentPlan == null)) {
-                  return const SizedBox.shrink(); // hide ghost tile
-                }
-
-                return GestureDetector(
-                  onTap: isPracticePlan &&
-                          currentPlan != null &&
-                          practiceDate != null
-                      ? () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PracticePlanDisplayPage(
-                                selectedDrills: List<Map<String, dynamic>>.from(
-                                    currentPlan!['drills']),
-                                practiceDate: practiceDate!,
+                if (isPracticePlan) {
+                  if (isPracticePlan &&
+                      (practiceDate == null || currentPlan == null)) {
+                    return const SizedBox.shrink(); // hide ghost tile
+                  }
+                  // Don't allow swipe-to-delete for practice plans
+                  return GestureDetector(
+                    onTap: currentPlan != null && practiceDate != null
+                        ? () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PracticePlanDisplayPage(
+                                  selectedDrills:
+                                      List<Map<String, dynamic>>.from(
+                                          currentPlan!['drills']),
+                                  practiceDate: practiceDate!,
+                                ),
                               ),
-                            ),
-                          );
-                        }
-                      : null,
-                  child: Container(
-                    width: double.infinity,
-                    margin:
-                        const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.deepPurple.shade50,
-                      border: Border.all(color: Colors.deepPurple),
-                      borderRadius: BorderRadius.circular(12),
+                            );
+                          }
+                        : null,
+                    child: Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 5, horizontal: 15),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple.shade50,
+                        border: Border.all(color: Colors.deepPurple),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.event, color: purple),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                data['title'] ?? '',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                ts != null
+                                    ? "${ts.month}/${ts.day} @ ${ts.hour}:${ts.minute.toString().padLeft(2, '0')}"
+                                    : "No time",
+                                style: const TextStyle(
+                                    fontSize: 13, fontStyle: FontStyle.italic),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.event, color: purple),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              data['title'] ?? '',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
+                  );
+                } else {
+                  return Dismissible(
+                    key: Key(doc.id),
+                    direction: DismissDirection.endToStart,
+                    confirmDismiss: (_) async {
+                      return await showDialog(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: const Text("Delete Event?"),
+                          content: const Text(
+                              "Are you sure you want to delete this event?"),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text("Cancel"),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              ts != null
-                                  ? "${ts.month}/${ts.day} @ ${ts.hour}:${ts.minute.toString().padLeft(2, '0')}"
-                                  : "No time",
-                              style: const TextStyle(
-                                  fontSize: 13, fontStyle: FontStyle.italic),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red),
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text("Delete"),
                             ),
                           ],
                         ),
-                      ],
+                      );
+                    },
+                    onDismissed: (_) {
+                      FirebaseFirestore.instance
+                          .collection('events')
+                          .doc(doc.id)
+                          .delete();
+                    },
+                    background: Container(
+                      color: Colors.red,
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: const Icon(Icons.delete, color: Colors.white),
                     ),
-                  ),
-                );
+                    child: Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 5, horizontal: 15),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple.shade50,
+                        border: Border.all(color: Colors.deepPurple),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.event, color: purple),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                data['title'] ?? '',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                ts != null
+                                    ? "${ts.month}/${ts.day} @ ${ts.hour}:${ts.minute.toString().padLeft(2, '0')}"
+                                    : "No time",
+                                style: const TextStyle(
+                                    fontSize: 13, fontStyle: FontStyle.italic),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
               }).toList(),
             );
           },
@@ -455,6 +557,28 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Dismissible(
                   key: Key(doc.id),
                   direction: DismissDirection.endToStart,
+                  confirmDismiss: (_) async {
+                    return await showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text("Delete Announcement?"),
+                        content: const Text(
+                            "Are you sure you want to delete this announcement?"),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text("Cancel"),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red),
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text("Delete"),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                   onDismissed: (_) {
                     FirebaseFirestore.instance
                         .collection('announcements')
@@ -467,13 +591,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: const Icon(Icons.delete, color: Colors.white),
                   ),
-                  child: Card(
+                  child: Container(
+                    width: double.infinity,
                     margin:
                         const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
-                    child: ListTile(
-                      leading: Icon(Icons.announcement, color: grey),
-                      title: Text(text,
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.deepPurple.shade50,
+                      border: Border.all(color: Colors.deepPurple),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.announcement, color: purple),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            text,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:playiq/drill_detail_page.dart';
 import 'package:playiq/practice_plan_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-//import 'package:playiq/home_screen.dart';
+import 'package:playiq/models/current_user.dart';
 
 class PracticePlanDisplayPage extends StatefulWidget {
   final List<Map<String, dynamic>> selectedDrills;
@@ -59,27 +59,26 @@ class _PracticePlanDisplayPageState extends State<PracticePlanDisplayPage> {
             .delete();
       }
 
-      // Delay to let Firestore updates 
+      // Delay to let Firestore updates
       await Future.delayed(const Duration(milliseconds: 150));
 
-if (context.mounted) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text("Practice Plan Completed"),
-      content: const Text("The plan has been deleted."),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context); // close dialog
-          },
-          child: const Text("OK"),
-        ),
-      ],
-    ),
-  );
-}
-
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Practice Plan Completed"),
+            content: const Text("The plan has been deleted."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // close dialog
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 
@@ -259,8 +258,9 @@ if (context.mounted) {
             Expanded(
               child: ReorderableListView.builder(
                 itemCount: _drills.length,
-                onReorder: _onReorder,
-                buildDefaultDragHandles: true,
+                onReorder:
+                    CurrentUser().role == 'coach' ? _onReorder : (_, __) {},
+                buildDefaultDragHandles: CurrentUser().role == 'coach',
                 itemBuilder: (context, index) {
                   final drill = _drills[index];
                   final title = drill["title"] ?? "Untitled Drill";
@@ -304,20 +304,18 @@ if (context.mounted) {
                                   ),
                                 ),
                               ),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.sync_alt,
-                                        color: Colors.deepPurple),
-                                    onPressed: () => _swapDrill(index),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete,
-                                        color: Colors.red),
-                                    onPressed: () => _deleteDrill(index),
-                                  ),
-                                ],
-                              ),
+                              if (CurrentUser().role == 'coach') ...[
+                                IconButton(
+                                  icon: const Icon(Icons.sync_alt,
+                                      color: Colors.deepPurple),
+                                  onPressed: () => _swapDrill(index),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete,
+                                      color: Colors.red),
+                                  onPressed: () => _deleteDrill(index),
+                                ),
+                              ]
                             ],
                           ),
                           const SizedBox(height: 6),
@@ -339,59 +337,51 @@ if (context.mounted) {
             const SizedBox(height: 20),
 
             // Row of buttons at the bottom of screen
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text("Add"),
-                  onPressed: _addCustomDrill,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    textStyle: const TextStyle(fontSize: 14),
+            if (CurrentUser().role == 'coach') ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text("Add"),
+                    onPressed: _addCustomDrill,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.save, size: 18),
-                  label: const Text("Save"),
-                  onPressed: _savePlan,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    textStyle: const TextStyle(fontSize: 14),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.save, size: 18),
+                    label: const Text("Save"),
+                    onPressed: _savePlan,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text("New"),
-                  onPressed: _resetPlan,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    textStyle: const TextStyle(fontSize: 14),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text("New"),
+                    onPressed: _resetPlan,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                ),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.check, size: 18),
-                  label: const Text("Complete"),
-                  onPressed: () => _markAsCompleted(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    textStyle: const TextStyle(fontSize: 14),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text("Complete"),
+                    onPressed: () => _markAsCompleted(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+              const SizedBox(height: 30),
+            ],
+
             const SizedBox(height: 30),
           ],
         ),
