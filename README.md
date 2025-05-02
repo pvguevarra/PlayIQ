@@ -98,12 +98,29 @@ flutter run
 
 ### Alternative: Using the APK
 
-Once the final `.apk` build is available, you can install it directly on any Android device:
+You can download and install the latest demo APK of **PlayIQ** directly from GitHub:
 
-1. Transfer the APK to your device.
-2. Enable "Install from Unknown Sources" in Android settings.
-3. Tap on the APK file to install and open the app.
-(I drag and drop the APK straight onto emulator)
+**[Download PlayIQ APK]([https://github.com/your-username/your-repo/releases/download/v1.0.0/app-release.apk](https://github.com/pvguevarra/PlayIQ/releases/tag/v.1.0.0))**
+
+> If the link doesn’t work, check the [Releases page] for the latest version.
+
+---
+
+### How to Install on Android Emulator
+
+1. **Download** the APK using the link above
+2. **Open your Android Emulator**
+3. **Drag and drop** the `.apk` file onto the emulator window
+4. The app will auto-install and launch
+
+---
+
+This version includes:
+- Team creation and login
+- Practice plan generator
+- Playbook management
+- Community forum and more
+
 
 ## Contributors
 
