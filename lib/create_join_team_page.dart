@@ -219,7 +219,6 @@ class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
               // Button to create the team
               ElevatedButton(
                 onPressed: generatedCode != null ? _createTeam : null,
-                child: const Text("Create Team"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
@@ -229,6 +228,7 @@ class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
+                child: const Text("Create Team"),
               ),
 
               const Divider(height: 40),
@@ -252,7 +252,6 @@ class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
               // Join existing team button
               ElevatedButton(
                 onPressed: _joinTeam,
-                child: const Text("Join Team"),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
@@ -262,6 +261,7 @@ class _CreateJoinTeamPageState extends State<CreateJoinTeamPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                child: const Text("Join Team"),
               ),
             ],
           ),

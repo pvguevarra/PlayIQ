@@ -17,6 +17,10 @@ class PlaybookPage extends StatefulWidget {
 class _PlaybookPageState extends State<PlaybookPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  String selectedCategory = "All";
+  List<String> categories = ["All", "Offense", "Defense", "Special Teams"];
+
+  /// Opens the modal to upload a new play
   void _openUploadPlayModal() async {
     await showModalBottomSheet(
       context: context,
@@ -24,9 +28,10 @@ class _PlaybookPageState extends State<PlaybookPage> {
       builder: (context) => const UploadPlayModal(),
     );
 
-    setState(() {});
+    setState(() {}); // Refresh the page after closing the modal
   }
 
+  /// Builds a card for each play in the playbook
   Widget _buildPlayCard(DocumentSnapshot document) {
     Map<String, dynamic> data = document.data() as Map<String, dynamic>;
 
@@ -63,6 +68,7 @@ class _PlaybookPageState extends State<PlaybookPage> {
             : const Icon(Icons.sports_football,
                 size: 40, color: Colors.deepPurple),
         onTap: () {
+          // Navigate to play detail page
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -89,48 +95,91 @@ class _PlaybookPageState extends State<PlaybookPage> {
       appBar: AppBar(
         title: const Text("Playbook"),
         centerTitle: true,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
       ),
       body: teamId == null
           ? const Center(child: Text("No team selected. Please re-login."))
-          : StreamBuilder<QuerySnapshot>(
-              stream: _firestore
-                  .collection('playbook_plays')
-                  .where('teamId', isEqualTo: teamId)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+          : Column(
+              children: [
+                // Category filter dropdown
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      const Text("Filter: ",
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 8),
+                      DropdownButton<String>(
+                        value: selectedCategory,
+                        items: categories
+                            .map((cat) =>
+                                DropdownMenuItem(value: cat, child: Text(cat)))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              selectedCategory = value;
+                            });
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
 
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      "No plays uploaded yet.\nTap + to add your first play!",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  );
-                }
+                // List of plays from Firestore
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: (selectedCategory == "All"
+                        ? _firestore
+                            .collection('playbook_plays')
+                            .where('teamId', isEqualTo: teamId)
+                            .snapshots()
+                        : _firestore
+                            .collection('playbook_plays')
+                            .where('teamId', isEqualTo: teamId)
+                            .where('category', isEqualTo: selectedCategory)
+                            .snapshots()),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-                // Filter out documents with null timestamps
-                final validDocs = snapshot.data!.docs.where((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  return data['timestamp'] != null;
-                }).toList();
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            "No plays uploaded yet.\nTap + to add your first play!",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        );
+                      }
+                      // Filter and sort plays
+                      final validDocs = snapshot.data!.docs.where((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        return data['timestamp'] != null;
+                      }).toList();
 
-                // Sort manually by timestamp (newest first)
-                validDocs.sort((a, b) {
-                  final aTs = (a['timestamp'] as Timestamp).toDate();
-                  final bTs = (b['timestamp'] as Timestamp).toDate();
-                  return bTs.compareTo(aTs);
-                });
+                      validDocs.sort((a, b) {
+                        final aTs = (a['timestamp'] as Timestamp).toDate();
+                        final bTs = (b['timestamp'] as Timestamp).toDate();
+                        return bTs.compareTo(aTs);
+                      });
 
-                return ListView(
-                  children:
-                      validDocs.map((doc) => _buildPlayCard(doc)).toList(),
-                );
-              },
+                      return ListView(
+                        children: validDocs
+                            .map((doc) => _buildPlayCard(doc))
+                            .toList(),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
+      // Only coaches can add plays
       floatingActionButton: CurrentUser().role == 'coach'
           ? FloatingActionButton(
               onPressed: _openUploadPlayModal,
@@ -142,6 +191,7 @@ class _PlaybookPageState extends State<PlaybookPage> {
   }
 }
 
+/// UploadPlayModal widget to upload a new play
 class UploadPlayModal extends StatefulWidget {
   const UploadPlayModal({super.key});
 
@@ -158,6 +208,7 @@ class _UploadPlayModalState extends State<UploadPlayModal> {
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
+  /// Picks an image from the gallery on phone
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -183,17 +234,20 @@ class _UploadPlayModalState extends State<UploadPlayModal> {
             const Text("Upload New Play",
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
+            // Play Title
             TextField(
               controller: titleController,
               decoration: const InputDecoration(labelText: "Title"),
             ),
             const SizedBox(height: 8),
+            // Play Description
             TextField(
               controller: descriptionController,
               decoration: const InputDecoration(labelText: "Description"),
               maxLines: 3,
             ),
             const SizedBox(height: 8),
+            // Play Category dropdown
             DropdownButtonFormField<String>(
               value: selectedCategory,
               items: categories
@@ -207,6 +261,7 @@ class _UploadPlayModalState extends State<UploadPlayModal> {
               decoration: const InputDecoration(labelText: "Category"),
             ),
             const SizedBox(height: 12),
+            // Play Image (optional)
             Text("Play Diagram (optional)",
                 style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
@@ -225,6 +280,7 @@ class _UploadPlayModalState extends State<UploadPlayModal> {
               ),
             ),
             const SizedBox(height: 16),
+            // Save Play button
             ElevatedButton(
               onPressed: () async {
                 final user = FirebaseAuth.instance.currentUser;
@@ -232,6 +288,7 @@ class _UploadPlayModalState extends State<UploadPlayModal> {
                 if (user != null && teamId != null) {
                   String? imageUrl;
 
+                  // Upload image to Firebase Storage if selected
                   if (_selectedImage != null) {
                     final fileName =
                         '${DateTime.now().millisecondsSinceEpoch}.jpg';
@@ -241,7 +298,7 @@ class _UploadPlayModalState extends State<UploadPlayModal> {
                     await storageRef.putFile(_selectedImage!);
                     imageUrl = await storageRef.getDownloadURL();
                   }
-
+                  // Saves the play to Firestore
                   await FirebaseFirestore.instance
                       .collection('playbook_plays')
                       .add({
@@ -254,7 +311,7 @@ class _UploadPlayModalState extends State<UploadPlayModal> {
                     'imageUrl': imageUrl,
                   });
 
-                  Navigator.pop(context);
+                  Navigator.pop(context); // Close the modal after saving
                 }
               },
               style: ElevatedButton.styleFrom(

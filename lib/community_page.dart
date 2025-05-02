@@ -1,10 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-// Community Page 
+// Community Page
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
 
@@ -13,12 +12,11 @@ class CommunityPage extends StatefulWidget {
 }
 
 class _CommunityPageState extends State<CommunityPage> {
-  
   // Set to keep track of expanded posts
   Set<String> expandedPosts = {};
 
-  // Tracks if we are sorting by newest or top posts
-  String sortOption = 'newest'; 
+  // Sort by newest or top posts
+  String sortOption = 'newest';
 
   // Opens the modal to create a new post
   void _openPostModal() {
@@ -69,6 +67,7 @@ class _CommunityPageState extends State<CommunityPage> {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              // Post Title and expand(arrow) icon
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -93,6 +92,7 @@ class _CommunityPageState extends State<CommunityPage> {
                   ],
                 ),
                 const SizedBox(height: 6),
+
                 // Post Content
                 Text(
                   data['content'] ?? '',
@@ -103,11 +103,14 @@ class _CommunityPageState extends State<CommunityPage> {
                   style: TextStyle(
                       color: Colors.grey[800], fontSize: 14, height: 1.4),
                 ),
+
                 const SizedBox(height: 12),
+
                 // Category and Vote Count
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    // Category label
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
@@ -124,6 +127,7 @@ class _CommunityPageState extends State<CommunityPage> {
                         ),
                       ),
                     ),
+                    // Voting buttons and counts
                     Row(
                       children: [
                         IconButton(
@@ -139,6 +143,7 @@ class _CommunityPageState extends State<CommunityPage> {
                                 .doc(postId);
 
                             if (myVote == 'upvote') {
+                              // Remove upvote
                               await postRef.update({
                                 'upvotes': FieldValue.increment(-1),
                                 'userVotes.${currentUser.uid}':
@@ -148,6 +153,7 @@ class _CommunityPageState extends State<CommunityPage> {
                                 upvotes--;
                                 myVote = null;
                               });
+                              // Remove downvote and switches to upvote
                             } else if (myVote == 'downvote') {
                               await postRef.update({
                                 'upvotes': FieldValue.increment(1),
@@ -159,6 +165,7 @@ class _CommunityPageState extends State<CommunityPage> {
                                 downvotes--;
                                 myVote = 'upvote';
                               });
+                              //Add upvote
                             } else {
                               await postRef.update({
                                 'upvotes': FieldValue.increment(1),
@@ -181,7 +188,7 @@ class _CommunityPageState extends State<CommunityPage> {
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          // Downvote button
+                          // Remove downvote
                           icon: Icon(Icons.arrow_downward,
                               color: myVote == 'downvote'
                                   ? Colors.red
@@ -202,6 +209,7 @@ class _CommunityPageState extends State<CommunityPage> {
                                 downvotes--;
                                 myVote = null;
                               });
+                              // Switches from upvote to downvote
                             } else if (myVote == 'upvote') {
                               await postRef.update({
                                 'upvotes': FieldValue.increment(-1),
@@ -213,6 +221,7 @@ class _CommunityPageState extends State<CommunityPage> {
                                 downvotes++;
                                 myVote = 'downvote';
                               });
+                              // Add downvote
                             } else {
                               await postRef.update({
                                 'downvotes': FieldValue.increment(1),
@@ -246,6 +255,7 @@ class _CommunityPageState extends State<CommunityPage> {
                       : '',
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                 ),
+                // Comment section
                 if (expandedPosts.contains(postId)) ...[
                   const Divider(height: 30),
                   CommentSection(postId: postId),
@@ -332,7 +342,6 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 }
-
 
 class CommentSection extends StatefulWidget {
   final String postId; // Post ID to fetch comments for
@@ -454,7 +463,8 @@ class _CreatePostModalState extends State<CreatePostModal> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -497,10 +507,13 @@ class _CreatePostModalState extends State<CreatePostModal> {
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () async {
-                  if (_titleController.text.isNotEmpty && _contentController.text.isNotEmpty) {
+                  if (_titleController.text.isNotEmpty &&
+                      _contentController.text.isNotEmpty) {
                     final user = FirebaseAuth.instance.currentUser;
                     if (user == null) return;
-                    await FirebaseFirestore.instance.collection('community_posts').add({
+                    await FirebaseFirestore.instance
+                        .collection('community_posts')
+                        .add({
                       'title': _titleController.text,
                       'content': _contentController.text,
                       'category': selectedCategory,
@@ -522,4 +535,3 @@ class _CreatePostModalState extends State<CreatePostModal> {
     );
   }
 }
-

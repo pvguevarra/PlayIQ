@@ -3,137 +3,140 @@ import 'package:playiq/models/current_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PlayDetailPage extends StatelessWidget {
-  final Map<String, dynamic> play;
+  final Map<String, dynamic>
+      play; // Play data gets passed from playbook_page.dart
 
   const PlayDetailPage({super.key, required this.play});
 
-
-
+  // Modal to edit play details
   void _showEditPlayModal(BuildContext context) {
-  final titleController = TextEditingController(text: play['title']);
-  final descriptionController = TextEditingController(text: play['description']);
-  String selectedCategory = play['category'] ?? "Offense";
+    final titleController = TextEditingController(text: play['title']);
+    final descriptionController =
+        TextEditingController(text: play['description']);
+    String selectedCategory = play['category'] ?? "Offense";
 
-  showDialog(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text("Edit Play"),
-      content: SingleChildScrollView(
-        child: Column(
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(labelText: "Title"),
-            ),
-            TextField(
-              controller: descriptionController,
-              decoration: const InputDecoration(labelText: "Description"),
-              maxLines: 3,
-            ),
-            DropdownButtonFormField<String>(
-              value: selectedCategory,
-              items: ["Offense", "Defense", "Special Teams"]
-                  .map((cat) => DropdownMenuItem(
-                        value: cat,
-                        child: Text(cat),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  selectedCategory = value;
-                }
-              },
-              decoration: const InputDecoration(labelText: "Category"),
-            ),
-          ],
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Edit Play"),
+        content: SingleChildScrollView(
+          child: Column(
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: "Title"),
+              ),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(labelText: "Description"),
+                maxLines: 3,
+              ),
+              DropdownButtonFormField<String>(
+                value: selectedCategory,
+                items: ["Offense", "Defense", "Special Teams"]
+                    .map((cat) => DropdownMenuItem(
+                          value: cat,
+                          child: Text(cat),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    selectedCategory = value;
+                  }
+                },
+                decoration: const InputDecoration(labelText: "Category"),
+              ),
+            ],
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            // Update play details in Firestore
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection('playbook_plays')
+                  .doc(play['docId'])
+                  .update({
+                'title': titleController.text.trim(),
+                'description': descriptionController.text.trim(),
+                'category': selectedCategory,
+              });
+              Navigator.pop(context); // Close Edit Play Modal
+              Navigator.pop(context); // Close Play Detail Page
+            },
+            child: const Text("Save Changes"),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            await FirebaseFirestore.instance
-                .collection('playbook_plays')
-                .doc(play['docId']) // we'll fix this in a sec!
-                .update({
-              'title': titleController.text.trim(),
-              'description': descriptionController.text.trim(),
-              'category': selectedCategory,
-            });
-            Navigator.pop(context);
-            Navigator.pop(context); // Close Play Detail Page to refresh list
-          },
-          child: const Text("Save Changes"),
-        ),
-      ],
-    ),
-  );
-}
+    );
+  }
 
-void _confirmDeletePlay(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: const Text("Delete Play?"),
-      content: const Text("Are you sure you want to delete this play?"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          onPressed: () async {
-            await FirebaseFirestore.instance
-                .collection('playbook_plays')
-                .doc(play['docId']) // fix this too
-                .delete();
-            Navigator.pop(context);
-            Navigator.pop(context); // Close Play Detail Page
-          },
-          child: const Text("Delete"),
-        ),
-      ],
-    ),
-  );
-}
-
+  // Confirmation dialog for deleting a play
+  void _confirmDeletePlay(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Delete Play?"),
+        content: const Text("Are you sure you want to delete this play?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              // Delete play from Firestore
+              await FirebaseFirestore.instance
+                  .collection('playbook_plays')
+                  .doc(play['docId'])
+                  .delete();
+              Navigator.pop(context); // Close Confirmation Dialog
+              Navigator.pop(context); // Close Play Detail Page
+            },
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-appBar: AppBar(
-  title: Text(play['title'] ?? 'Play Details'),
-  centerTitle: true,
-  actions: CurrentUser().role == 'coach'
-      ? [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'edit') {
-                _showEditPlayModal(context);
-              } else if (value == 'delete') {
-                _confirmDeletePlay(context);
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                child: Text('Edit Play'),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Text('Delete Play'),
-              ),
-            ],
-          )
-        ]
-      : null,
-),
-
+      appBar: AppBar(
+        title: Text(play['title'] ?? 'Play Details'),
+        centerTitle: true,
+        // Only show actions if the user is a coach
+        actions: CurrentUser().role == 'coach'
+            ? [
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _showEditPlayModal(context);
+                    } else if (value == 'delete') {
+                      _confirmDeletePlay(context);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Text('Edit Play'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Delete Play'),
+                    ),
+                  ],
+                )
+              ]
+            : null,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(

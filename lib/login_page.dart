@@ -13,11 +13,12 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance; // Firebase Authentication instance
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  bool _isLoading = false;
+  bool _isLoading = false;// Loading state for the login button
 
+  // Handles user login logic
   Future<void> _login() async {
     setState(() => _isLoading = true);
     try {
@@ -26,16 +27,18 @@ class _LoginPageState extends State<LoginPage> {
         password: passwordController.text.trim(),
       );
 
+      // Retrieve user data to get role and teamId
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user!.uid)
           .get();
 
-
       final currentUser = CurrentUser();
       currentUser.role = userDoc['role'];
       currentUser.teamId = userDoc['teamId'];
 
+      // If no teamId is found, navigate to CreateJoinTeamPage
+      // Otherwise, navigate to DashboardPage
       if (currentUser.teamId == null || currentUser.teamId!.isEmpty) {
         Navigator.pushReplacement(
           context,
@@ -47,9 +50,10 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(builder: (_) => const DashboardPage()),
         );
       }
+      // Show error message if login fails
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login Failed: \${e.toString()}")),
+        SnackBar(content: Text("Login Failed")),
       );
     } finally {
       setState(() => _isLoading = false);
@@ -63,6 +67,7 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: Stack(
           children: [
+            // Back Button
             Positioned(
               top: 0,
               left: 0,
@@ -81,13 +86,15 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(height: 40),
+                    // App Logo
                     SizedBox(
                       height: 160,
                       child: Image.asset('assets/images/PlayIQ_Logo.png'),
                     ),
                     const SizedBox(height: 20),
+                    // Welcome Text Title
                     const Text(
-                      "Welcome Back!", //Might Remove Later
+                      "Welcome Back!", 
                       style:
                           TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                     ),
@@ -97,6 +104,7 @@ class _LoginPageState extends State<LoginPage> {
                       style: TextStyle(color: Colors.grey),
                     ),
                     const SizedBox(height: 30),
+                    // Email and Password TextFields
                     TextField(
                       controller: emailController,
                       decoration: const InputDecoration(
@@ -107,6 +115,7 @@ class _LoginPageState extends State<LoginPage> {
                       keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 20),
+                    // Password TextField
                     TextField(
                       controller: passwordController,
                       decoration: const InputDecoration(
@@ -120,13 +129,64 @@ class _LoginPageState extends State<LoginPage> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
+                        // Forgot Password Button sends email to reset password
                         onPressed: () {
-                          // TODO: Implement password reset
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              final TextEditingController resetEmailController =
+                                  TextEditingController();
+
+                              return AlertDialog(
+                                title: const Text("Reset Password"),
+                                content: TextField(
+                                  controller: resetEmailController,
+                                  decoration: const InputDecoration(
+                                      labelText: 'Enter your email'),
+                                  keyboardType: TextInputType.emailAddress,
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text("Cancel"),
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: () async {
+                                      try {
+                                        await FirebaseAuth.instance
+                                            .sendPasswordResetEmail(
+                                                email: resetEmailController.text
+                                                    .trim());
+
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                              content: Text(
+                                                  "Password reset email sent.")),
+                                        );
+                                      } catch (e) {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                              content: Text(
+                                                  "Error: ${e.toString()}")),
+                                        );
+                                      }
+                                    },
+                                    child: const Text("Send"),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
                         },
                         child: const Text("Forgot Password?"),
                       ),
                     ),
                     const SizedBox(height: 20),
+                    // Login Button loading indicator
                     _isLoading
                         ? const CircularProgressIndicator()
                         : SizedBox(
