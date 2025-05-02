@@ -341,40 +341,63 @@ class _PracticePlanDisplayPageState extends State<PracticePlanDisplayPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text("Add"),
-                    onPressed: _addCustomDrill,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
+                  Flexible(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text("Add"),
+                      onPressed: _addCustomDrill,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 10),
+                        textStyle: const TextStyle(fontSize: 14),
+                      ),
                     ),
                   ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.save, size: 18),
-                    label: const Text("Save"),
-                    onPressed: _savePlan,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      foregroundColor: Colors.white,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.save, size: 18),
+                      label: const Text("Save"),
+                      onPressed: _savePlan,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 10),
+                        textStyle: const TextStyle(fontSize: 14),
+                      ),
                     ),
                   ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.refresh, size: 18),
-                    label: const Text("New"),
-                    onPressed: _resetPlan,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
-                      foregroundColor: Colors.white,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text("New"),
+                      onPressed: _resetPlan,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.deepPurple,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 10),
+                        textStyle: const TextStyle(fontSize: 14),
+                      ),
                     ),
                   ),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text("Complete"),
-                    onPressed: () => _markAsCompleted(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
-                      foregroundColor: Colors.white,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text("Done"),
+                      onPressed: () => _markAsCompleted(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 10),
+                        textStyle: const TextStyle(fontSize: 14),
+                      ),
                     ),
                   ),
                 ],
