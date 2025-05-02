@@ -103,6 +103,7 @@ Once the final `.apk` build is available, you can install it directly on any And
 1. Transfer the APK to your device.
 2. Enable "Install from Unknown Sources" in Android settings.
 3. Tap on the APK file to install and open the app.
+(I drag and drop the APK straight onto emulator)
 
 ## Contributors
 
