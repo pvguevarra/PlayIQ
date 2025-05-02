@@ -100,7 +100,7 @@ flutter run
 
 You can download and install the latest demo APK of **PlayIQ** directly from GitHub:
 
-**[Download PlayIQ APK]([https://github.com/your-username/your-repo/releases/download/v1.0.0/app-release.apk](https://github.com/pvguevarra/PlayIQ/releases/tag/v.1.0.0))**
+**[Download PlayIQ APK](https://github.com/pvguevarra/PlayIQ/releases/tag/v.1.0.0)**
 
 > If the link doesn’t work, check the [Releases page] for the latest version.
 
