@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:playiq/practice_plan_display.dart';
 import 'package:playiq/models/current_user.dart';
+
 class PracticePlanPage extends StatefulWidget {
   const PracticePlanPage({super.key});
 
@@ -153,10 +154,8 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
         'generatedBy': user.uid,
       }, SetOptions(merge: true));
 
-      // Add event directly during generation
-
+      // Cleans up previous events before adding new one
       if (selectedDateTime != null) {
-        // Delete previous Practice Plan events before adding new one
         final previous = await FirebaseFirestore.instance
             .collection('events')
             .where('teamId', isEqualTo: teamId)
@@ -214,111 +213,116 @@ class _PracticePlanPageState extends State<PracticePlanPage> {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-body: Padding(
-  padding: const EdgeInsets.all(16.0),
-  child: CurrentUser().role == 'coach'
-      ? SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                    labelText: 'Total Practice Duration (minutes)'),
-                value: selectedPracticeTime,
-                items: practiceTimes
-                    .map((time) => DropdownMenuItem(
-                          value: time,
-                          child: Text('$time minutes'),
-                        ))
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => selectedPracticeTime = value),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                    labelText: 'Time Per Drill (minutes)'),
-                value: selectedDrillTime,
-                items: drillTimes
-                    .map((time) => DropdownMenuItem(
-                          value: time,
-                          child: Text('$time minutes'),
-                        ))
-                    .toList(),
-                onChanged: (value) => setState(() => selectedDrillTime = value),
-              ),
-              const SizedBox(height: 12),
-              TextButton.icon(
-                onPressed: _pickDateTime,
-                icon: const Icon(Icons.calendar_today),
-                label: Text(
-                  selectedDateTime != null
-                      ? "Practice Date: ${selectedDateTime!.month}/${selectedDateTime!.day} @ ${selectedDateTime!.hour}:${selectedDateTime!.minute.toString().padLeft(2, '0')}"
-                      : "Select Practice Date & Time",
-                  style: const TextStyle(fontSize: 16),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: CurrentUser().role == 'coach'
+            ? SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Dropdown for practice duration
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                          labelText: 'Total Practice Duration (minutes)'),
+                      value: selectedPracticeTime,
+                      items: practiceTimes
+                          .map((time) => DropdownMenuItem(
+                                value: time,
+                                child: Text('$time minutes'),
+                              ))
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => selectedPracticeTime = value),
+                    ),
+                    const SizedBox(height: 12),
+                    // Dropdown for drill duration
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                          labelText: 'Time Per Drill (minutes)'),
+                      value: selectedDrillTime,
+                      items: drillTimes
+                          .map((time) => DropdownMenuItem(
+                                value: time,
+                                child: Text('$time minutes'),
+                              ))
+                          .toList(),
+                      onChanged: (value) =>
+                          setState(() => selectedDrillTime = value),
+                    ),
+                    const SizedBox(height: 12),
+                    // Date and time picker for practice date
+                    TextButton.icon(
+                      onPressed: _pickDateTime,
+                      icon: const Icon(Icons.calendar_today),
+                      label: Text(
+                        selectedDateTime != null
+                            ? "Practice Date: ${selectedDateTime!.month}/${selectedDateTime!.day} @ ${selectedDateTime!.hour}:${selectedDateTime!.minute.toString().padLeft(2, '0')}"
+                            : "Select Practice Date & Time",
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Category filters
+                    const Text(
+                      'Categories',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.black,
+                      ),
+                    ),
+                    CheckboxListTile(
+                      title: const Text("Select All"),
+                      value: selectAllCategories,
+                      activeColor: Colors.deepPurple,
+                      onChanged: (value) {
+                        setState(() {
+                          selectAllCategories = value!;
+                          categoryFilters.updateAll((key, _) => value);
+                        });
+                      },
+                    ),
+                    ...categoryFilters.keys.map((category) => CheckboxListTile(
+                          title: Text(category),
+                          value: categoryFilters[category],
+                          activeColor: Colors.deepPurple,
+                          onChanged: (value) {
+                            setState(() {
+                              categoryFilters[category] = value!;
+                              selectAllCategories =
+                                  !categoryFilters.containsValue(false);
+                            });
+                          },
+                        )),
+                    const SizedBox(height: 20),
+                    // Generate Practice Plan button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: generatePracticePlan,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Colors.deepPurple,
+                          foregroundColor: Colors.white,
+                          textStyle: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text("Generate Practice Plan"),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : const Center(
+                child: Text(
+                  "Practice Plan Has Not Been Created Yet.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Categories',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.black,
-                ),
-              ),
-              CheckboxListTile(
-                title: const Text("Select All"),
-                value: selectAllCategories,
-                activeColor: Colors.deepPurple,
-                onChanged: (value) {
-                  setState(() {
-                    selectAllCategories = value!;
-                    categoryFilters.updateAll((key, _) => value);
-                  });
-                },
-              ),
-              ...categoryFilters.keys.map((category) => CheckboxListTile(
-                    title: Text(category),
-                    value: categoryFilters[category],
-                    activeColor: Colors.deepPurple,
-                    onChanged: (value) {
-                      setState(() {
-                        categoryFilters[category] = value!;
-                        selectAllCategories =
-                            !categoryFilters.containsValue(false);
-                      });
-                    },
-                  )),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: generatePracticePlan,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.deepPurple,
-                    foregroundColor: Colors.white,
-                    textStyle: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text("Generate Practice Plan"),
-                ),
-              ),
-            ],
-          ),
-        )
-      : const Center(
-          child: Text(
-            "Practice Plan Has Not Been Created Yet.",
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-        ),
-),
-
+      ),
     );
   }
 }
